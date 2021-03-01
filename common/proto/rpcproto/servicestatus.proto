@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package rpc;
+option go_package = ".;rpc";
+
+//PlayerService->CenterService同步负载情况
+message PlayerServiceBalance  {
+  int32 NodeId = 1;
+  int32 Weigh = 2;
+}
+
+message CheckOnLineReq{
+  uint64 ClientId = 1;
+}
+
+message CheckOnLineRes{
+  bool flag= 1;
+}
+
+//PlayerService->CenterService刷新所有玩家的列表
+message UpdatePlayerList{
+  int32 NodeId = 1;
+  repeated uint64  UList = 2;
+}
+/*//PlayerService->QueueService刷新单个玩家的列表
+// flag  1  登入  2 登出
+message UpdateClientOne{
+  int32 NodeId = 1;
+  uint64 ClientId = 2;
+  int32 flag = 3;
+}*/
+//RoomService->TableService 初始化创建房间
+message CreateTable{
+  string TableUuid = 1;
+  int32 TableType = 2;
+  int32 PlayerNum = 3; //人数
+  repeated string roomUuidList = 4; //房间id 进行数据回退
+  repeated uint64 shouldConnectedClintList = 5;//应该连接的客户端
+}
+
+//PlayerService->RoomService关闭单个房间
+message RemoveOneRoom{
+  uint64 RoomUuid = 1;
+}
+
+
+/*
+//PlayerService->QueueService刷新所有玩家的列表
+message UpdateClientList{
+  int32 NodeId = 1;
+  repeated uint64  CList = 2;
+}
+*/
+
+//GateService->HttpGateService同步负载
+message GateBalance  {
+  int32 NodeId = 1;
+  int32 Weigh = 2;
+}
+
+
+//获取user所在playerService的NodeID
+message QueryUserNodeID {
+    uint64 UserID = 1;
+}
+
+message QueryUserNodeIDRet {
+    int32 NodeID = 1;
+}
+
+

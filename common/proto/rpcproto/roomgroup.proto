@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "proto/rpcproto/base.proto";
+
+package rpc;
+option go_package = ".;rpc";
+
+//queueService-match 从队列匹配上组成一个组
+message AddGroupRes{
+  repeated uint64 ClientIdList = 1;
+}
+
+//queueService-match 从队列匹配上组成一个组
+message AddGroupRet{
+  uint64 GroupId = 1;
+}
+
+// QueueService->RoomService 获取某个房间信息
+message GetRoomReq{
+  string RoomUuid = 1;
+}
+message GetRoomRes{
+  Room room = 1;
+}

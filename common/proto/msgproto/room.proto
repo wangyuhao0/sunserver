@@ -1,0 +1,60 @@
+syntax = "proto3";
+import "proto/msgproto/errcode.proto";
+import "proto/msgproto/playerinfo.proto";
+package msg;
+option go_package = ".;msg";
+
+message MsgCreateRoomReq{
+  int32  RoomType = 1;
+  PlayerInfo PlayerInfo = 2;
+}
+
+message MsgCreateRoomRes{
+  ErrCode Ret = 1; //0 成功
+  string  RoomUuid = 2;
+}
+
+message MsgAddRoomReq{
+  string  RoomUuid = 1;
+  PlayerInfo PlayerInfo = 2;
+}
+
+message MsgAddRoomRes{
+  ErrCode Ret = 1;
+  //uint64 ClientId = 2;
+  //Room Room = 3;
+}
+
+//同步房间已有用户
+message MsgClientOnRoomRes{
+  repeated PlayerInfo RoomPlayer = 1;
+}
+
+message MsgQuitRoomReq{
+  string  RoomUuid = 1;
+}
+
+message MsgQuitRoomRes{
+  ErrCode Ret = 1;
+}
+
+
+   /* uuid string //房间uuid
+    roomName string //房间名字
+    ownerCid uint64
+    roomType int32 //房间类型
+    avgRank uint64 //房间平均分数
+    roomClientNum int32 //房间人数
+    owner *common.PlayerInfo
+    otherUsers []*common.PlayerInfo*/
+message Room{
+  string Uuid = 1;
+  string RoomName = 2 ;
+  int32 RoomType = 3;
+  uint64 AvgRank = 4 ;
+  int32 RoomClientNum = 5;
+  PlayerInfo Owner = 6;
+  repeated PlayerInfo OtherClients = 7;
+}
+
+

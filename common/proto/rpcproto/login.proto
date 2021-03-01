@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package rpc;
+option go_package = ".;rpc";
+
+enum LoginStatus
+{
+    LoginStart  = 0;
+    Logining  = 1;
+    Logined  =2;
+    LoginOut  = 3;
+}
+
+enum LoginType
+{
+  Gust = 0;
+  Account = 1;
+  Facebook = 2;
+  Google = 3;
+  LoginType_Max = 4;
+}
+
+//向数据库请求登陆
+message LoginInfo{
+  LoginType PlatType     = 1;
+  string    PlatId       = 2;
+  string    AccessToken  = 3;
+}
+
+//数据库返回结果
+message LoginResult{
+  LoginType PlatType     = 1;
+  string    PlatId       = 2;
+  string    AccessToken  = 3;
+  int32     Ret = 4;
+}
+
+//选服请求
+message ChoseServerReq {
+  uint64 UserId = 1;
+}
+
+//选服返回结果
+message ChoseServerRet {
+  string Token = 1;
+  int32 Ret    = 2;
+}
+
+//登陆网关Token验证请求
+message LoginGateCheckReq{
+  uint64 UserId = 1;
+  string Token  = 2;
+}
+
+//登陆网关Token验证结果返回
+message LoginGateCheckRet{
+  int32 Ret = 1;  //0表示成功 1 登陆会话不存在，重新走登陆流程  2登陆Token错误
+  int32 NodeId = 2; //PlayerService nodeId
+}
+
+//请求登陆到PlayerService
+message LoginToPlayerServiceReq{
+  int32 NodeId = 1;
+  uint64 ClientId = 2;
+  uint64 UserId = 3;
+}
+
+//PlayerService返回登陆结果
+message LoginToPlayerServiceRet{
+  int32 Ret  = 1;  //0表示成功 1 登陆会话不存在，重新走登陆流程  2登陆Token错误
+  int32 NodeId = 2;//PlayerService nodeId
+}
+
+//PlayerSerivce->CenterService同步玩家状态
+message UpdatePlayerStatus  {
+  int32 NodeId = 1;
+  uint64 UserId = 2;
+  LoginStatus Status = 3;
+}
+

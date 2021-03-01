@@ -1,0 +1,28 @@
+{
+    "NodeList":[
+      {
+        "NodeId": 941,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:21001",
+        "NodeName": "Node_Master",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["CenterService"]
+      },
+      {
+        "NodeId": 942,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:21002",
+        "NodeName": "Node_Master",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["CenterService"]
+      },
+      {
+        "NodeId": 943,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:21003",
+        "NodeName": "Node_Master",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["CenterService"]
+      }
+    ]
+}

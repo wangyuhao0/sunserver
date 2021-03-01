@@ -1,0 +1,59 @@
+{
+  "Service":{
+	  "TcpGateService":{
+		  "MsgRouter":[
+			  {"MsgId":"10000-20000","Rpc":"PlayerService.RPC_Recv"},
+			  {"MsgId":"30000","Rpc":"RankService.RPC_Query"}
+		  ],
+		  "EventRouter":[
+			  {"EventType":1000,"Rpc":"GameService.RPC_OnConnect"},
+			  {"EventType":1001,"Rpc":"GameService.RPC_OnDisConnect"}
+		  ]
+	  },
+	  "DBService": {
+		"Url": "mongodb://admin:123456@49.232.105.112:27017",
+		"DBName": "testdb",
+		"GoroutineNum": 100,
+		"SessionNum": 2,
+		"DialTimeout": 10,
+		"SyncTimeout": 10,
+		"ChannelNum": 1000
+	  }
+  },
+  "NodeService":[
+   {
+      "NodeId":30,
+	  "TcpService":{
+		"ListenAddr":"0.0.0.0:9401",
+		"MaxConnNum":3000,
+		"PendingWriteNum":10000,
+		"LittleEndian":false,
+		"MinMsgLen":4,
+		"MaxMsgLen":65535
+	  }
+   },
+	  {
+		  "NodeId":31,
+		  "TcpService":{
+			  "ListenAddr":"0.0.0.0:9402",
+			  "MaxConnNum":3000,
+			  "PendingWriteNum":10000,
+			  "LittleEndian":false,
+			  "MinMsgLen":4,
+			  "MaxMsgLen":65535
+		  }
+	  },
+	  {
+		  "NodeId":32,
+		  "TcpService":{
+			  "ListenAddr":"0.0.0.0:9403",
+			  "MaxConnNum":3000,
+			  "PendingWriteNum":10000,
+			  "LittleEndian":false,
+			  "MinMsgLen":4,
+			  "MaxMsgLen":65535
+		  }
+	  }
+  ]
+ 
+}

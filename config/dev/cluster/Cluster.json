@@ -1,0 +1,36 @@
+{
+  "NodeList":[
+    {
+      "NodeId": 1,
+      "Private": false,
+      "ListenAddr":"0.0.0.0:10101",
+      "NodeName": "Node_Gate1",
+      "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+      "ServiceList": [
+        "_HttpService",
+        "_HttpGateService",
+        "_CenterService",
+        "_MongoService",
+        "_TcpService",
+        "_GateService",
+        "_AuthService",
+        "_PlayerService",
+        "_OriginHelperService",
+        "_MsgCenterService",
+        "_MysqlService",
+        "_RedisService",
+        "_RoomService",
+        "_QueueService",
+        "_TableService"
+      ]
+    },
+    {
+      "NodeId": 2,
+      "Private": false,
+      "ListenAddr":"0.0.0.0:10102",
+      "NodeName": "Node_Bot",
+      "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+      "ServiceList": ["_OriginHelperService"]
+    }
+  ]
+}

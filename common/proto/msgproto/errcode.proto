@@ -1,0 +1,25 @@
+syntax = "proto3";
+package msg;
+option go_package = ".;msg";
+
+enum ErrCode
+{
+    OK              = 0;
+    InterNalError   = 1;  //内部错误
+    TokenError      = 2;  //Token验证错误
+    ConnExceeded    = 3;  //超过最大连接数
+    RepeatLoginReq  = 4;  //已经是登陆请求,不允许重复请求
+    PlatTypeError   = 5;  //平台类型错误
+    PlatIdError     = 6;  //平台Id错误
+
+    NotLoginPlayerService = 7; //未登录到playerSevice 直接创建room
+    RoomIdNotExist = 8; //房间号不存在
+    NeedReMatch=9; //重新匹配
+    TableIdNotExist = 10; // 卓子号不存在
+    NotOwner = 11; //不是房主
+    TableIsEnough = 12; //房间满了
+    HaveClientRefuse = 13; //有用户拒绝了
+
+
+}
+

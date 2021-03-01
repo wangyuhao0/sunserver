@@ -1,0 +1,69 @@
+{
+  "Service":{
+	  "HttpGateService":
+		  [
+			  {"NodeId": 30,"Addr": "127.0.0.1:9401"},
+			  {"NodeId": 31,"Addr": "127.0.0.1:9402"},
+			  {"NodeId": 32,"Addr": "127.0.0.1:9403"}
+		  ],
+	  "DBService": {
+		  "Url": "mongodb://admin:123456@49.232.105.112:27017",
+		  "DBName": "testdb",
+		  "GoroutineNum": 2,
+		  "SessionNum": 2,
+		  "DialTimeout": 5,
+		  "SyncTimeout": 5,
+		  "ChannelNum": 1000
+	  }
+  },
+  "NodeService":[
+	  {
+      "NodeId":1,
+	   "HttpService":{
+		   "ListenAddr":"0.0.0.0:9101",
+		   "ReadTimeout":10000,
+		   "WriteTimeout":10000,
+		   "ProcessTimeout":10000,
+		   "CAFile":[
+			   {
+				   "Certfile":"",
+				   "Keyfile":""
+			   }
+		   ]
+
+	   }
+   },
+	  {
+		  "NodeId":2,
+		  "HttpService":{
+			  "ListenAddr":"0.0.0.0:9102",
+			  "ReadTimeout":10000,
+			  "WriteTimeout":10000,
+			  "ProcessTimeout":10000,
+			  "CAFile":[
+				  {
+					  "Certfile":"",
+					  "Keyfile":""
+				  }
+			  ]
+
+		  }
+	  },
+	  {
+		  "NodeId":3,
+		  "HttpService":{
+			  "ListenAddr":"0.0.0.0:9103",
+			  "ReadTimeout":10000,
+			  "WriteTimeout":10000,
+			  "ProcessTimeout":10000,
+			  "CAFile":[
+				  {
+					  "Certfile":"",
+					  "Keyfile":""
+				  }
+			  ]
+		  }
+	  }
+  ]
+ 
+}

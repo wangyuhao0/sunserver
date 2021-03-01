@@ -1,0 +1,28 @@
+{
+    "NodeList":[
+      {
+        "NodeId": 30,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20101",
+        "NodeName": "Node_Gate1",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["_TcpService","_TcpGateService"]
+      },
+      {
+        "NodeId": 31,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20102",
+        "NodeName": "Node_Gate2",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["_TcpService","_TcpGateService"]
+      },
+      {
+        "NodeId": 32,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20103",
+        "NodeName": "Node_Gate3",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["_TcpService","_TcpGateService"]
+      }
+    ]
+}

@@ -1,0 +1,32 @@
+syntax = "proto3";
+import "proto/msgproto/errcode.proto";
+package msg;
+option go_package = ".;msg";
+
+message MsgAddQueueReq{
+  string RoomUuid = 1;
+  uint64 UserId = 2;
+}
+
+message MsgAddQueueRes{
+  ErrCode Ret = 1; //0 成功
+}
+
+message MsgQuitQueueReq{
+  string RoomUuid = 1;
+  uint64 UserId = 2;
+}
+
+message MsgQuitQueueRes{
+  ErrCode Ret = 1; //0 成功
+}
+
+
+message MsgMatchReq{
+  uint64 ClientId = 1;
+}
+
+message MsgMatchRes{
+  ErrCode Ret = 1; //0 成功
+  string TableId = 2; //房间号
+}

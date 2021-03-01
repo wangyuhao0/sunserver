@@ -1,0 +1,24 @@
+syntax = "proto3";
+import "proto/msgproto/errcode.proto";
+package msg;
+option go_package = ".;msg";
+
+message MsgAddTableReq{
+  uint64 UserId = 1;
+  string TableUuid = 2;
+  int32 flag = 3; // 1 同意 0 拒绝
+}
+
+message MsgAddTableRes{
+  ErrCode Ret = 1; //0 成功
+}
+
+message MsgClientConnectedStatusRes{
+  ErrCode Ret = 1; //0 成功
+}
+
+
+
+
+
+

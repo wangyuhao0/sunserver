@@ -1,0 +1,53 @@
+syntax = "proto3";
+package msg;
+option go_package = ".;msg";
+
+enum MsgType
+{
+  Null = 0;
+  Ping = 100;
+  Pong = 101;
+
+  ClientSyncTimeReq = 998;
+  ClientSyncTimeRes = 999;
+  LoginReq = 1000;
+  LoginRes = 1001;
+
+  //一下为主动推送消息
+  SyncStart = 5000;
+  LoadFinish = 5001;
+
+
+  //QueueSerivce  20001-30000
+  AddQueueReq = 20001;
+  AddQueueRes = 20002;
+  QuitQueueReq = 20003;
+  QuitQueueRes = 20004;
+  MatchReq = 20005;
+  MatchRes = 20006;
+
+
+  //RoomSercice 10001 -  20000
+  CreateRoomReq = 10001;
+  CreateRoomRes = 10002;
+  AddRoomReq = 10003;
+  AddRoomRes = 10004;
+  QuitRoomReq = 10005;
+  QuitRoomRes = 10006;
+  RadioOtherAddRoomRes = 10007;
+
+
+  //TableService 30001 - 40000
+  AddTableReq = 30001;
+  AddTableRes = 30002;
+  ClientConnectedStatus = 30003;
+
+
+  //FriendService 40001 - 50000
+  FriendListReq = 40001;
+  FriendListRes = 40002;
+  NoticeFriendOnLine = 40003;
+  NoticeFiendOffLine = 40004;
+
+}
+

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package msg;
+option go_package = ".;msg";
+//用户基本信息
+message PlayerInfo{
+  uint64 userId = 1;
+  uint64 rank = 2;
+  string nickName = 3;
+  int32 sex = 4;
+  string avatar = 5;
+  uint64 clientId = 6;
+  bool isOwner = 7;
+  int32 seatNum = 8;
+}

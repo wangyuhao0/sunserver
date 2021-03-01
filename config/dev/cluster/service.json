@@ -1,0 +1,128 @@
+{
+  "Service": {
+    "AuthService": {
+      "GoRoutineNum": 10
+    },
+    "GateService": {
+      "MaxConnect": 5000,
+      "MsgRouter": [
+        {
+          "MsgId": "1-9999",
+          "ServiceName": "PlayerService"
+        },
+        {
+          "MsgId": "10000-20000",
+          "ServiceName": "RoomService"
+        },
+        {
+          "MsgId": "20001-30000",
+          "ServiceName": "QueueService"
+        },
+        {
+          "MsgId": "30001-40000",
+          "ServiceName": "TableService"
+        }
+      ]
+    },
+    "HttpGateService": [
+      {
+        "NodeId": 30,
+        "Addr": "127.0.0.1:9401"
+      },
+      {
+        "NodeId": 31,
+        "Addr": "127.0.0.1:9402"
+      },
+      {
+        "NodeId": 32,
+        "Addr": "127.0.0.1:9403"
+      },
+      {
+        "NodeId": 1,
+        "Addr": "127.0.0.1:9401"
+      }
+    ],
+    "TcpService": {
+      "ListenAddr": "0.0.0.0:9401",
+      "MaxConnNum": 5000,
+      "PendingWriteNum": 10000,
+      "LittleEndian": false,
+      "MinMsgLen": 2,
+      "MaxMsgLen": 65535,
+      "ReadDeadline": 1500,
+      "WriteDeadline": 1500
+    },
+    "MySqlService": {
+      "Url": "49.232.105.112:27017",
+      "UserName":"root",
+      "PassWord":"123456",
+      "DBName": "testdb",
+      "GoroutineNum": 2,
+      "MaxConn": 100,
+      "ChannelNum": 5000
+    },
+    "MongoService": {
+      "Url": "mongodb://admin:123456@49.232.105.112:27017",
+      "DBName": "testdb",
+      "GoroutineNum": 2,
+      "SessionNum": 2,
+      "DialTimeout": 5,
+      "SyncTimeout": 5,
+      "ChannelNum": 5000
+    },
+    "RedisService": {
+      "DbIndex":1,
+      "Url": "127.0.0.1",
+      "Port": 6379,
+      "Password": "",
+      "IdleTimeout": 1000,
+      "MaxIdle": 100,
+      "MaxActive": 100,
+      "GoroutineNum": 2,
+      "ChannelNum": 5000
+    },
+    "QueueService": {
+      "MaxQueueNum": 5000,
+      "Queue": [
+        {
+          "RoomType": 1,
+          "PlayerNum": 10,
+          "MinRank": 0,
+          "MaxRank": 100000,
+          "RankInterval": 30000
+        },
+        {
+          "RoomType": 2,
+          "PlayerNum": 3,
+          "MinRank": 0,
+          "MaxRank": 100000,
+          "RankInterval": 50000
+        },
+        {
+          "RoomType": 3,
+          "PlayerNum": 4,
+          "MinRank": 0,
+          "MaxRank": 100000,
+          "RankInterval": 10000
+        }
+      ]
+    }
+  },
+  "NodeService": [
+    {
+      "NodeId": 1,
+      "HttpService": {
+        "ListenAddr": "0.0.0.0:9101",
+        "ReadTimeout": 10000,
+        "WriteTimeout": 10000,
+        "ProcessTimeout": 10000,
+        "CAFile": [
+          {
+            "Certfile": "",
+            "Keyfile": ""
+          }
+        ]
+      }
+    }
+  ]
+}

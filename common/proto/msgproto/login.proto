@@ -1,0 +1,32 @@
+syntax = "proto3";
+import "proto/msgproto/errcode.proto";
+
+package msg;
+option go_package = ".;msg";
+
+message SelfStrUint64 {
+    string data = 1;
+}
+
+message SelfUint64 {
+    uint32 high = 1;
+    uint32 slow = 2;
+}
+
+message MsgLoginReq{
+  uint64  UserId = 1;
+  string  Token = 2;
+}
+
+message MsgLoginRes{
+  ErrCode Ret = 1; //0 成功
+}
+
+message MsgClientSyncTimeReq{
+    int64 syncInfo = 1; ///
+}
+
+message MsgClientSyncTimeRes{
+    string result = 1;
+    int64 test = 2;
+}

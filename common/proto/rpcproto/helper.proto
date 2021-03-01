@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package rpc;
+option go_package = ".;rpc";
+
+//向各个服发送配置重新加载
+message ReloadCfgInfo{
+  repeated string fileNameList = 1;
+}
+
+//向各个服发送配置重新加载返回
+message ReloadCfgResult{
+  uint32 status = 1; //0为成功
+}

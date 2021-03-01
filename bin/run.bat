@@ -1,0 +1,1 @@
+ .\sunserver.exe -config ./config/dev -start nodeid=1

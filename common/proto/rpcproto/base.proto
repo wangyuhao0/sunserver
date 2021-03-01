@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+
+option go_package = ".;rpc";
+
+message Int{
+  int32 value = 1;
+}
+
+
+message Int64{
+  int64 value = 1;
+}
+
+message Bool{
+  bool value = 1;
+}
+
+message String{
+  string value = 1;
+}
+
+message Bytes{
+  bytes value = 1;
+}
+
+message PlaceHolders{
+}
+
+//邮件结构
+message UserMailInfo {
+  string      Id = 1;              //邮件ID
+  int32       MailType = 2;        //邮件类型
+  uint64      FromUser = 3;        //发送邮件User id
+  uint64      SendToUser = 4;      //接收邮件User id
+  string      Title = 5;           //邮件标题
+  string      Content = 6;         //邮件内容
+  int64       SendTime = 7;        //发送时间戳
+  int32       Status = 8;          //邮件状态
+  bytes       Attachment = 9;      //附件 map[string]interface转的json的[]byte
+}
+
+message PlayerInfo{
+  uint64 userId = 1;
+  uint64 rank = 2;
+  string nickName = 3;
+  int32 sex = 4;
+  string avatar = 5;
+  uint64 clientId = 6;
+  bool isOwner = 7;
+  int32 seatNum = 8;
+}
+
+
+message Room{
+  string Uuid = 1;
+  string RoomName = 2 ;
+  int32 RoomType = 3;
+  uint64 AvgRank = 4 ;
+  int32 RoomClientNum = 5;
+  PlayerInfo Owner = 6;
+  repeated PlayerInfo OtherClients = 7;
+}

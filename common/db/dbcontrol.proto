@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+
+package db;
+option go_package=".;db";
+
+//如果包含Insert+Update，如果存在由更新
+enum OptType {
+    None   = 0;
+    Find   = 1;
+    Insert = 2;
+    Update = 4;
+    Del    = 8;
+    Upset  = 16;
+    SetOnInsert = 32;
+}
+
+message DBControllerReq {
+    OptType type = 1;
+    uint64 key = 2;
+    string collectName = 3;
+    bytes condition = 4;
+    bytes selectField = 5;
+    int32 maxRow = 6;
+    string sort = 7;
+    repeated bytes data = 8;
+}
+
+message DBControllerRet {
+  OptType type = 1;
+  repeated bytes res = 2;
+  int32 rowNum = 3;
+}
+
+message MysqlControllerReq{
+    OptType type = 1;
+    string collectName = 2;
+    repeated string selectField = 3;
+    string sql = 4;
+    repeated string args = 5;
+}
+
+message MysqlControllerRet {
+    OptType type = 1;
+    repeated bytes res = 2;
+    int32 rowNum = 3;
+}
+
+message RedisControllerReq{
+    OptType type = 1;
+    uint64 key = 2;
+    string rKey = 3;
+    string rValue = 4;
+}
+
+message RedisControllerRet {
+    OptType type = 1;
+    bytes res = 2;
+    int32 rowNum = 3;
+}
+
+
+

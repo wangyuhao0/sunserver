@@ -1,0 +1,28 @@
+{
+    "NodeList":[
+      {
+        "NodeId": 201,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20301",
+        "NodeName": "Node_Map1",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["MapService"]
+      },
+      {
+        "NodeId": 202,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20302",
+        "NodeName": "Node_Map2",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["MapService"]
+      },
+      {
+        "NodeId": 203,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20303",
+        "NodeName": "Node_Map3",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["MapService"]
+      }
+    ]
+}

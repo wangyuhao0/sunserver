@@ -1,0 +1,3 @@
+#执行次数,每次执行完成等待时间[ns/us/ms/s],全部执行完等待时间[ns/us/ms/s],命令行
+1,10s,20s,addbot 1 200
+100000,1s,1s,botsendmsg 1 200 998 {"syncInfo":3200}

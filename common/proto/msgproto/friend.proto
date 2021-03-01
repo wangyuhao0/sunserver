@@ -1,0 +1,74 @@
+syntax = "proto3";
+import "proto/msgproto/errcode.proto";
+import "proto/msgproto/playerinfo.proto";
+package msg;
+option go_package = ".;msg";
+
+
+message MsgFriendListReq{
+
+  uint64 UserId = 1;
+
+}
+
+message MsgFriendListRes{
+
+  int32 onLineTotal = 1; //在线人数
+  int32 total = 2; // 总人数
+  repeated Friend friend = 3; // 好友
+
+}
+
+message MsgSearchFriendReq{
+  int32 UserId = 1; //被搜索的用户信息
+  string UserNickName = 2; //用户昵称也可以
+}
+
+message MsgSearchFriendRes{
+  PlayerInfo playerInfo = 1;  //返回具体信息
+}
+
+message AddFriendReq{
+  int32 UserId = 1;
+  int32 AddUserId = 2; //被添加的用户id
+}
+
+message AddFriendRes{
+  //刷新列表
+  int32 onLineTotal = 1; //在线人数
+  int32 total = 2; // 总人数
+  repeated Friend friend = 3; // 好友
+}
+
+message RemoveFriendReq{
+  int32 UserId = 1;
+  int32 DelUserId = 2; //被移除的用户id
+}
+
+//通知被移除用户  和 移除发起者  先查看被移除用户是否在线 不在线就不推送
+message RemoveFriendRes{
+  //刷新列表
+  int32 onLineTotal = 1; //在线人数
+  int32 total = 2; // 总人数
+  repeated Friend friend = 3; // 好友
+}
+
+
+
+message MsgNoticeFriendOnLine{
+  int32 onLineUserId = 1;
+  Friend friend = 2; //刷新信息
+}
+
+
+message MsgNoticeFriendOffLine{
+  int32 offLineUserId = 1;
+  Friend friend = 2;
+}
+
+message Friend{
+  PlayerInfo playerInfo = 1;
+  int32 status = 2; //上下线状态 1 上线 0 下线
+}
+
+

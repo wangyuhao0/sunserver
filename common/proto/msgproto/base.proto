@@ -1,0 +1,14 @@
+syntax = "proto3";
+//import "proto/msgproto/errcode.proto";
+
+package msg;
+option go_package = ".;msg";
+
+message MsgPing{
+}
+
+message MsgPong{
+}
+
+message MsgNil{
+}

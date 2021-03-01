@@ -1,0 +1,1 @@
+Linux下编译：gcc -O2 -shared -fPIC -I /usr/include/lua5.1/  pb.c -o pb.so

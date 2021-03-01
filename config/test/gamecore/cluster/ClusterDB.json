@@ -1,0 +1,28 @@
+{
+    "NodeList":[
+      {
+        "NodeId": 900,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20401",
+        "NodeName": "Node_MangoDB1",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["DBService"]
+      },
+      {
+        "NodeId": 901,
+        "Private": true,
+        "ListenAddr":"0.0.0.0:20402",
+        "NodeName": "Node_MangoDB2",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["DBService"]
+      },
+      {
+        "NodeId": 902,
+        "Private": true,
+        "ListenAddr":"0.0.0.0:20403",
+        "NodeName": "Node_MangoDB3",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["DBService"]
+      }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+  "NodeList":[
+    {
+      "NodeId": 1,
+      "Private": false,
+      "ListenAddr":"0.0.0.0:10101",
+      "NodeName": "Node_Gate1",
+      "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+      "ServiceList": ["_HttpService","_HttpGateService","_OriginHelperService","CenterService","DBService","_TcpService","_GateService","_AuthService","PlayerService"]
+    }
+  ]
+}

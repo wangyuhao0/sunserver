@@ -1,0 +1,12 @@
+{
+    "NodeList":[
+      {
+        "NodeId": 930,
+        "Private": true,
+        "ListenAddr":"0.0.0.0:20601",
+        "NodeName": "Node_Rank",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["RankService"]
+      }
+    ]
+}

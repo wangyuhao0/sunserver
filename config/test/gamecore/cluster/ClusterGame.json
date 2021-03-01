@@ -1,0 +1,28 @@
+{
+    "NodeList":[
+      {
+        "NodeId": 100,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20201",
+        "NodeName": "Node_Game1",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["GameService"]
+      },
+      {
+        "NodeId": 101,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20202",
+        "NodeName": "Node_Game2",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["GameService"]
+      },
+      {
+        "NodeId": 102,
+        "Private": false,
+        "ListenAddr":"0.0.0.0:20203",
+        "NodeName": "Node_Game3",
+        "remark":"//以_打头的，表示只在本机进程，不对整个子网开发",
+        "ServiceList": ["GameService"]
+      }
+    ]
+}
