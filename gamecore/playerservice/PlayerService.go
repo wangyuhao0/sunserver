@@ -10,6 +10,7 @@ import (
 	"github.com/duanhf2012/origin/node"
 	originrpc "github.com/duanhf2012/origin/rpc"
 	"github.com/duanhf2012/origin/service"
+	sync2 "github.com/duanhf2012/origin/util/sync"
 	"github.com/duanhf2012/origin/util/timer"
 	"github.com/golang/protobuf/proto"
 	"sunserver/common/configdef"
@@ -27,7 +28,6 @@ import (
 
 var playerService PlayerService
 
-
 func init() {
 	node.Setup(&playerService)
 }
@@ -38,7 +38,9 @@ type protoMsg struct {
 }
 
 func (m *protoMsg) Reset() {
-	m.msg.Reset()
+	if m.msg != nil {
+		m.msg.Reset()
+	}
 }
 
 func (m *protoMsg) IsRef() bool {
@@ -55,7 +57,7 @@ func (m *protoMsg) UnRef() {
 
 type RegMsgInfo struct {
 	protoMsg    *protoMsg
-	msgPool     *sync.Pool
+	msgPool     *sync2.PoolEx
 	msgCallBack msghandler.CallBack
 }
 
@@ -72,18 +74,17 @@ func RegisterMessage(msgType msg.MsgType, message proto.Message, cb msghandler.C
 	var regMsgInfo RegMsgInfo
 	regMsgInfo.protoMsg = &protoMsg{}
 	regMsgInfo.protoMsg.msg = message
-	regMsgInfo.msgPool = &sync.Pool{
-		New: func() interface{} {
-			protoMsg := protoMsg{}
-			protoMsg.msg = proto.Clone(regMsgInfo.protoMsg.msg)
-			return &protoMsg
-		},
-	}
+	regMsgInfo.msgPool = sync2.NewPoolEx(make(chan sync2.IPoolData, 1000), func() sync2.IPoolData {
+		protoMsg := protoMsg{}
+		protoMsg.msg = proto.Clone(regMsgInfo.protoMsg.msg)
+		return &protoMsg
+	})
 	regMsgInfo.msgCallBack = cb
 	playerService.mapRegisterMsg[msgType] = &regMsgInfo
 }
 
 var playerPool sync.Pool
+
 //var protoMsgPool sync.Pool
 
 var GateService string = "GateService"
@@ -331,7 +332,7 @@ func (cb *RpcOnRecvCallBack) Unmarshal(data []byte) (interface{}, error) {
 	}
 
 	protoMsg := msgInfo.NewMsg()
-	if protoMsg.msg !=nil {
+	if protoMsg.msg != nil {
 		err = proto.Unmarshal(data[2+len(clientIdList)*8:], protoMsg.msg)
 		if err != nil {
 			err = fmt.Errorf("message type %d is not  register.", rawInput.GetMsgType())

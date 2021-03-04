@@ -52,11 +52,11 @@
       "ReadDeadline": 1500,
       "WriteDeadline": 1500
     },
-    "MySqlService": {
-      "Url": "49.232.105.112:27017",
+    "MysqlService": {
+      "Url": "127.0.0.1:3306",
       "UserName":"root",
       "PassWord":"123456",
-      "DBName": "testdb",
+      "DBName": "origin",
       "GoroutineNum": 2,
       "MaxConn": 100,
       "ChannelNum": 5000

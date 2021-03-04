@@ -5,6 +5,7 @@ import (
 	"github.com/duanhf2012/origin/log"
 	"github.com/duanhf2012/origin/node"
 	"github.com/duanhf2012/origin/service"
+	sync2 "github.com/duanhf2012/origin/util/sync"
 	"github.com/duanhf2012/origin/util/timer"
 	"github.com/golang/protobuf/proto"
 	"sunserver/common/entity"
@@ -22,10 +23,10 @@ import (
 var queueService QueueService
 var roomPool sync.Pool
 var playerInfoPool sync.Pool
+
 func init() {
 	node.Setup(&queueService)
 }
-
 
 type protoMsg struct {
 	ref bool
@@ -33,7 +34,9 @@ type protoMsg struct {
 }
 
 func (m *protoMsg) Reset() {
-	m.msg.Reset()
+	if m.msg != nil {
+		m.msg.Reset()
+	}
 }
 
 func (m *protoMsg) IsRef() bool {
@@ -50,7 +53,7 @@ func (m *protoMsg) UnRef() {
 
 type RegMsgInfo struct {
 	protoMsg    *protoMsg
-	msgPool     *sync.Pool
+	msgPool     *sync2.PoolEx
 	msgCallBack msghandler.CallBack
 }
 
@@ -67,37 +70,33 @@ func RegisterMessage(msgType msg.MsgType, message proto.Message, cb msghandler.C
 	var regMsgInfo RegMsgInfo
 	regMsgInfo.protoMsg = &protoMsg{}
 	regMsgInfo.protoMsg.msg = message
-	regMsgInfo.msgPool = &sync.Pool{
-		New: func() interface{} {
-			protoMsg := protoMsg{}
-			protoMsg.msg = proto.Clone(regMsgInfo.protoMsg.msg)
-			return &protoMsg
-		},
-	}
+	regMsgInfo.msgPool = sync2.NewPoolEx(make(chan sync2.IPoolData, 1000), func() sync2.IPoolData {
+		protoMsg := protoMsg{}
+		protoMsg.msg = proto.Clone(regMsgInfo.protoMsg.msg)
+		return &protoMsg
+	})
 	regMsgInfo.msgCallBack = cb
 	queueService.mapRegisterMsg[msgType] = &regMsgInfo
 }
 
-
 type QueueService struct {
 	service.Service
 
-	mapRegisterMsg         map[msg.MsgType]*RegMsgInfo   //消息注册
+	mapRegisterMsg map[msg.MsgType]*RegMsgInfo //消息注册
 	//mapClientOnline        map[int32]*ClientPlayer   // 用来校验用户是否登录
 	//依据房间类型
 	mapRoomOnQueue map[int32]*QueueTypeList // 在线排队 roomType->[ {a-b:[实际的人]}  ]
 
-	mapRoom map[string] *common.Room  //存放房间的 判断房间是否存在
+	mapRoom map[string]*common.Room //存放房间的 判断房间是否存在
 
 	maxPlayerNum uint64 //每个队列排队最大人数
 
 	//groupPlayerNum uint64 // 每组匹配人数
 	gateProxy *common.GateProxyModule //网关代理
 
-
 	cycleDo *cycledo.QueueInterface
 
-	match *MatchModule	// 匹配模块
+	match *MatchModule // 匹配模块
 
 }
 
@@ -125,12 +124,12 @@ type QueueTypeList struct {
 	maxRank      uint64
 	rankInterval uint64
 	//依据分数房间队列
-	queueList    map[*RankRange]*QueueList
+	queueList map[*RankRange]*QueueList
 }
 
 type QueueList struct {
-	waitPlayerNum   uint64
-	roomList *def.MapList //clientID 从PlayService同步过来
+	waitPlayerNum uint64
+	roomList      *def.MapList //clientID 从PlayService同步过来
 }
 
 const UINT_MAX = ^uint64(0)
@@ -138,7 +137,7 @@ const UINT_MAX = ^uint64(0)
 func (qs *QueueService) OnInit() error {
 	//1.初始化变量与模块
 	qs.mapRoomOnQueue = make(map[int32]*QueueTypeList, 4096)
-	qs.mapRoom =  make(map[string]*common.Room, 4096)
+	qs.mapRoom = make(map[string]*common.Room, 4096)
 	qs.mapRegisterMsg = make(map[msg.MsgType]*RegMsgInfo, 512)
 	//qs.mapClientOnline = make(map[int32]*ClientPlayer, 20)
 	roomPool = sync.Pool{New: func() interface{} {
@@ -152,7 +151,6 @@ func (qs *QueueService) OnInit() error {
 	qs.gateProxy = common.NewGateProxyModule()
 	qs.AddModule(qs.gateProxy)
 
-
 	qs.match = NewMatchModule()
 	qs.AddModule(qs.match)
 
@@ -162,7 +160,7 @@ func (qs *QueueService) OnInit() error {
 	msghandler.OnRegisterMessage(RegisterMessage)
 
 	//10 s 扫描一次匹配队列
-	qs.NewTicker(30*time.Second,qs.matchProcess)
+	qs.NewTicker(30*time.Second, qs.matchProcess)
 
 	//10 s 打印一次队列
 	//qs.NewTicker(10*time.Second,qs.fmtQueue)
@@ -172,7 +170,7 @@ func (qs *QueueService) OnInit() error {
 	qs.GetProfiler().SetMaxOverTime(time.Second * 10)
 
 	// 注册原始套接字回调
-	qs.RegRawRpc(global.RawRpcOnRecv,&RpcOnRecvCallBack{})
+	qs.RegRawRpc(global.RawRpcOnRecv, &RpcOnRecvCallBack{})
 
 	//绑定
 	queueInterface := cycledo.New(qs)
@@ -189,7 +187,7 @@ func (qs *QueueService) matchProcess(timer *timer.Ticker) {
 		queueList := queueTypeInfo.queueList
 		playerNum := queueTypeInfo.playerNum
 		for rankRange, playerList := range queueList {
-			log.Release("目前执行匹配rank段为[%d-%d]", rankRange.startRank,rankRange.endRank)
+			log.Release("目前执行匹配rank段为[%d-%d]", rankRange.startRank, rankRange.endRank)
 			num := playerList.waitPlayerNum
 			roomList := playerList.roomList
 			if num < uint64(playerNum) {
@@ -197,7 +195,7 @@ func (qs *QueueService) matchProcess(timer *timer.Ticker) {
 				continue
 			}
 			//匹配模块的匹配方法
-			qs.match.Match(roomList,queueTypeInfo.playerNum)
+			qs.match.Match(roomList, queueTypeInfo.playerNum)
 		}
 	}
 }
@@ -280,12 +278,12 @@ func (qs *QueueService) OnLoadCfg() {
 		for {
 			if MinRank >= MaxRank {
 				//放入剩余部分
-				if  MaxRank%RankInterval !=0{
+				if MaxRank%RankInterval != 0 {
 					//没有余数 有余数进行处理
-					rankMap[&RankRange{MinRank-RankInterval, MaxRank}] = &QueueList{0,def.NewMapList()}
+					rankMap[&RankRange{MinRank - RankInterval, MaxRank}] = &QueueList{0, def.NewMapList()}
 				}
 				//对数据放入 maxRank-MAX
-				rankMap[&RankRange{MaxRank, UINT_MAX}] = &QueueList{0,def.NewMapList()}
+				rankMap[&RankRange{MaxRank, UINT_MAX}] = &QueueList{0, def.NewMapList()}
 				break
 			}
 			rank = MinRank + RankInterval
@@ -337,17 +335,17 @@ func (qs *QueueService) NewPlayerInfo() *entity.PlayerInfo {
 	return playerInfo
 }
 
-func (qs *QueueService) fmtQueue(timer *timer.Ticker)  {
+func (qs *QueueService) fmtQueue(timer *timer.Ticker) {
 	for k, v := range qs.mapRoomOnQueue {
-		log.Release("打印排队队列 k--%d",k)
+		log.Release("打印排队队列 k--%d", k)
 		for rang, list := range v.queueList {
 			roomList := list.roomList
-			log.Release("rank段:%d-%d,房间数:%d",rang.startRank,rang.endRank,roomList.Size())
+			log.Release("rank段:%d-%d,房间数:%d", rang.startRank, rang.endRank, roomList.Size())
 		}
 	}
 }
 
-func (qs *QueueService) PackPlayerInfo(pbData *rpc.PlayerInfo)  *entity.PlayerInfo{
+func (qs *QueueService) PackPlayerInfo(pbData *rpc.PlayerInfo) *entity.PlayerInfo {
 	playerInfo := qs.NewPlayerInfo()
 	playerInfo.SetUserId(pbData.GetUserId())
 	playerInfo.SetSex(pbData.GetSex())
@@ -361,8 +359,7 @@ func (qs *QueueService) PackPlayerInfo(pbData *rpc.PlayerInfo)  *entity.PlayerIn
 	return playerInfo
 }
 
-
-func (qs *QueueService) PackRoom(res *rpc.GetRoomRes)  *common.Room{
+func (qs *QueueService) PackRoom(res *rpc.GetRoomRes) *common.Room {
 	room := qs.NewRoom()
 	pbRoom := res.GetRoom()
 	pbOwner := pbRoom.GetOwner()
@@ -371,27 +368,26 @@ func (qs *QueueService) PackRoom(res *rpc.GetRoomRes)  *common.Room{
 	otherClients := pbRoom.GetOtherClients()
 	other := make([]*entity.PlayerInfo, len(otherClients))
 	for _, client := range otherClients {
-		other = append(other,qs.PackPlayerInfo(client))
+		other = append(other, qs.PackPlayerInfo(client))
 	}
-	room.PackFromPb(qs.gateProxy,pbRoom.GetUuid(),pbRoom.GetRoomName(),pbRoom.GetRoomClientNum(),owner,other,pbRoom.GetRoomType(),pbRoom.GetAvgRank())
+	room.PackFromPb(qs.gateProxy, pbRoom.GetUuid(), pbRoom.GetRoomName(), pbRoom.GetRoomClientNum(), owner, other, pbRoom.GetRoomType(), pbRoom.GetAvgRank())
 	return room
 }
-
 
 func (qs *QueueService) AddQueue(room *common.Room) bool {
 	log.Release("加入队列---%d", room.GetUUid())
 	rank := room.GetAvgRank()
 	roomType := room.GetRoomType()
 	var flag bool
-	for queueType,info := range qs.mapRoomOnQueue {
+	for queueType, info := range qs.mapRoomOnQueue {
 		if int32(queueType) == roomType {
 			list := info.queueList
-			for rankRange,playerList:=range list {
+			for rankRange, playerList := range list {
 				//取左不取右
 				if rankRange.startRank <= rank && rankRange.endRank > rank {
 					//在区间里面
 					playerList.waitPlayerNum += uint64(room.GetRoomClientNum())
-					playerList.roomList.Push(room.GetUUid(),room)
+					playerList.roomList.Push(room.GetUUid(), room)
 					flag = true
 				}
 			}
@@ -400,27 +396,26 @@ func (qs *QueueService) AddQueue(room *common.Room) bool {
 	return flag
 }
 
-func (qs *QueueService) AddRoom(room *common.Room)  {
+func (qs *QueueService) AddRoom(room *common.Room) {
 	qs.mapRoom[room.GetUUid()] = room
 }
 
-func (qs *QueueService) GetRoom(roomUuid string)  *common.Room{
+func (qs *QueueService) GetRoom(roomUuid string) *common.Room {
 	return qs.mapRoom[roomUuid]
 }
 
 func (qs *QueueService) RemoveRoom(roomUuid string) {
-	delete(qs.mapRoom,roomUuid)
+	delete(qs.mapRoom, roomUuid)
 }
-
 
 func (qs *QueueService) QuitQueue(room *common.Room) {
 	log.Release("移除队列---%d", room.GetUUid())
 	rank := room.GetAvgRank()
 	roomType := room.GetRoomType()
-	for queueType,info := range qs.mapRoomOnQueue {
+	for queueType, info := range qs.mapRoomOnQueue {
 		if queueType == roomType {
 			list := info.queueList
-			for rankRange,playerList:=range list {
+			for rankRange, playerList := range list {
 				if rankRange.startRank <= rank && rankRange.endRank >= rank {
 					//在区间里面
 					playerList.waitPlayerNum -= uint64(room.GetRoomClientNum())
@@ -430,7 +425,6 @@ func (qs *QueueService) QuitQueue(room *common.Room) {
 		}
 	}
 }
-
 
 /*// PlayerService服同步负载情况
 func (qs *QueueService) RPC_UpdateBalance(clist *rpc.UpdateClientList) error {
@@ -505,7 +499,7 @@ func (cb *RpcOnRecvCallBack) Unmarshal(data []byte) (interface{}, error) {
 	}
 
 	protoMsg := msgInfo.NewMsg()
-	if protoMsg.msg !=nil {
+	if protoMsg.msg != nil {
 		err = proto.Unmarshal(data[2+len(clientIdList)*8:], protoMsg.msg)
 		if err != nil {
 			err = fmt.Errorf("message type %d is not  register.", rawInput.GetMsgType())
@@ -529,7 +523,6 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 		return
 	}
 
-
 	msgType := msg.MsgType(args.GetMsgType())
 
 	msgInfo, ok := queueService.mapRegisterMsg[msgType]
@@ -537,7 +530,7 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 		log.Warning("close client %d,message type %d is not  register.", clientIdList[0], msgType)
 		return
 	}
-	msgInfo.msgCallBack(queueService.cycleDo,clientIdList[0], args.GetProtoMsg().(*protoMsg).msg)
+	msgInfo.msgCallBack(queueService.cycleDo, clientIdList[0], args.GetProtoMsg().(*protoMsg).msg)
 	msgInfo.ReleaseMsg(args.GetProtoMsg().(*protoMsg))
 }
 

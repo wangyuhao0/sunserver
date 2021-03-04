@@ -1,17 +1,15 @@
 package dbservice
-/*
+
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/duanhf2012/origin/log"
 	"github.com/duanhf2012/origin/node"
 	"github.com/duanhf2012/origin/rpc"
 	"github.com/duanhf2012/origin/service"
 	"github.com/duanhf2012/origin/sysmodule/mysqlmondule"
-	"github.com/duanhf2012/origin/util/timer"
-	"go/token"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"runtime"
+	"sunserver/common/collect"
 	"sunserver/common/db"
 	"sync/atomic"
 	"time"
@@ -26,7 +24,7 @@ const slowTime = int64(500) //毫秒
 type MysqlService struct {
 	service.Service
 	mysqlModule    mysqlmondule.MySQLModule
-	channelOptData []chan DBRequest
+	channelOptData []chan MysqlDBRequest
 	url            string
 	userName       string
 	passWord       string
@@ -92,8 +90,8 @@ func (mysqlService *MysqlService) ReadCfg() error {
 }
 
 func (mysqlService *MysqlService) OnInit() error {
-	log.Release("start init MysqlService")
-
+	fmt.Println("start init MysqlService")
+	defer fmt.Println("finish init MysqlService")
 	err := mysqlService.ReadCfg()
 	if err != nil {
 		return err
@@ -104,9 +102,9 @@ func (mysqlService *MysqlService) OnInit() error {
 		return err
 	}
 
-	mysqlService.channelOptData = make([]chan DBRequest, mysqlService.goroutineNum)
+	mysqlService.channelOptData = make([]chan MysqlDBRequest, mysqlService.goroutineNum)
 	for i := uint32(0); i < mysqlService.goroutineNum; i++ {
-		mysqlService.channelOptData[i] = make(chan DBRequest, mysqlService.channelNum)
+		mysqlService.channelOptData[i] = make(chan MysqlDBRequest, mysqlService.channelNum)
 		go mysqlService.ExecuteOptData(mysqlService.channelOptData[i])
 	}
 
@@ -121,21 +119,10 @@ func (mysqlService *MysqlService) OnInit() error {
 	mysqlService.GetProfiler().SetOverTime(time.Millisecond * 500)
 	mysqlService.GetProfiler().SetMaxOverTime(time.Second * 10)
 
-	log.Release("finish init MysqlService")
 	return nil
 }
 
-
-
-func (MysqlService *MysqlService) PrintDBCost(tm *timer.Ticker) {
-	averageCostTime := int64(0)
-	if MysqlService.dbDealCount != 0 {
-		averageCostTime = MysqlService.dbAllCostTime / int64(MysqlService.dbDealCount)
-	}
-	log.Release("MysqlService dbDealCount[%d], dbMaxCostTime[%d], averageCostTime[%d]", MysqlService.dbDealCount, MysqlService.dbMaxCostTime, averageCostTime)
-}
-
-func (mysqlService *MysqlService) ExecuteOptData(channelOptData chan DBRequest) {
+func (mysqlService *MysqlService) ExecuteOptData(channelOptData chan MysqlDBRequest) {
 	defer func() {
 		if r := recover(); r != nil {
 			buf := make([]byte, 4096)
@@ -158,14 +145,6 @@ func (mysqlService *MysqlService) ExecuteOptData(channelOptData chan DBRequest) 
 				mysqlService.DoFind(optData)
 			case db.OptType_Insert:
 				mysqlService.DoInsert(optData)
-			case db.OptType_Insert + db.OptType_Update:
-				mysqlService.DoInsertUpdate(optData)
-			case db.OptType_SetOnInsert:
-				mysqlService.DoSetOnInsert(optData)
-			case db.OptType_SetOnInsert + db.OptType_Find:
-				mysqlService.DoSetOnInsertFind(optData)
-			case db.OptType_Upset:
-				mysqlService.DoUpSet(optData)
 			default:
 				log.Error("optype %d is error.", optData.request.GetType())
 			}
@@ -184,291 +163,75 @@ func (mysqlService *MysqlService) ExecuteOptData(channelOptData chan DBRequest) 
 	}
 }
 
-
-func (mysqlService *MysqlService) DoSetOnInsert(dbReq DBRequest) {
+func (mysqlService *MysqlService) DoDel(dbReq MysqlDBRequest) {
 	//1.选择数据库与表
 	request := dbReq.request
-	collectName := request.CollectName
-	request.
-	mysqlService.mysqlModule.Exec()
+	sql := request.Sql
+	args := request.Args
+	exec, err := mysqlService.mysqlModule.Exec(sql, args)
 
-	//2.设置数据
-	if len(dbReq.request.Data) != 1 {
-		err := fmt.Errorf("%s DoUpdate data len is error %d.", dbReq.request.CollectName, len(dbReq.request.Data))
-		log.Error(err.Error())
-		MysqlService.responseRet(dbReq, err, 0)
-		return
-	}
-	var data interface{}
-	err := bson.Unmarshal(dbReq.request.Data[0], &data)
 	if err != nil {
-		err := fmt.Errorf("%s DoInsertUpdate data Unmarshal error %s.", dbReq.request.CollectName, err.Error())
-		log.Error(err.Error())
-		MysqlService.responseRet(dbReq, err, 0)
-		return
+		log.Error("%s DoDel fail error %s", dbReq.request.TableName, err.Error())
 	}
+	mysqlService.responseRet(dbReq, err, int32(exec.RowsAffected))
+}
 
-	//3.设置条件
-	var condition interface{}
-	bson.Unmarshal(dbReq.request.GetCondition(), &condition)
-	changeInfo, err := collect.Upsert(condition, bson.M{"$setOnInsert": data})
+func (mysqlService *MysqlService) DoUpdate(dbReq MysqlDBRequest) {
+	//1.选择数据库与表
+	request := dbReq.request
+	sql := request.Sql
+	args := request.Args
+	exec, err := mysqlService.mysqlModule.Exec(sql, args)
+	if err != nil {
+		log.Error("%s DoUpdate fail error %s", dbReq.request.TableName, err.Error())
+	}
 
 	if dbReq.responder.IsInvalid() == false {
-		MysqlService.responseRet(dbReq, err, int32(changeInfo.Updated))
+		mysqlService.responseRet(dbReq, err, int32(exec.RowsAffected))
 	}
 }
 
-func (MysqlService *MysqlService) DoSetOnInsertFind(dbReq DBRequest) {
+func (mysqlService *MysqlService) DoFind(dbReq MysqlDBRequest) {
 	//1.选择数据库与表
-	req := dbReq.request
-	collectName := req.CollectName
-	req.
-	dataBase := MysqlService.mongoModule.Take().DB(MysqlService.dbName)
-	collect := dataBase.C(dbReq.request.GetCollectName())
+	request := dbReq.request
+	tableName := request.TableName
+	var dbRet db.MysqlControllerRet
+	var rowNum int
 
-	//2.设置数据
-	if len(dbReq.request.Data) != 1 {
-		err := fmt.Errorf("%s DoUpdate data len is error %d.", dbReq.request.CollectName, len(dbReq.request.Data))
-		log.Error(err.Error())
-		MysqlService.responseRet(dbReq, err, 0)
-		return
-	}
-	var data interface{}
-	uErr := bson.Unmarshal(dbReq.request.Data[0], &data)
-	if uErr != nil {
-		uErr := fmt.Errorf("%s DoInsertUpdate data Unmarshal error %s.", dbReq.request.CollectName, uErr.Error())
-		log.Error(uErr.Error())
-		MysqlService.responseRet(dbReq, uErr, 0)
-		return
-	}
-
-	//3.设置条件
-	var condition interface{}
-	bson.Unmarshal(dbReq.request.GetCondition(), &condition)
-	_, usErr := collect.Upsert(condition, bson.M{"$setOnInsert": data})
-	if dbReq.responder.IsInvalid() == false && usErr != nil {
-		MysqlService.responseRet(dbReq, usErr, 0)
-		return
-	}
-
-	if dbReq.responder == nil {
-		return
-	}
-
-	//4.设置条件
-	finds := collect.Find(condition)
-
-	//5.排序
-	if dbReq.request.GetSort() != "" {
-		finds = finds.Sort(dbReq.request.GetSort())
-	}
-
-	//6.limit
-	var res []interface{}
-	if dbReq.request.GetMaxRow() > 0 {
-		finds = finds.Limit(int(dbReq.request.GetMaxRow()))
-	}
-
-	//7.获取结果集
-	var dbRet db.DBControllerRet
-	var err error
-	//if dbReq.request.GetMaxRow() != 0 {
-	finds.All(&res)
+	var rpcErr rpc.RpcError
 	//序列化结果
 	dbRet.Type = dbReq.request.Type
-	dbRet.Res = make([][]byte, len(res))
-	var rpcErr rpc.RpcError
-	for i := 0; i < len(res); i++ {
-		dbRet.Res[i], err = bson.Marshal(res[i])
-		if err != nil {
-			rpcErr = rpc.RpcError(err.Error())
-			dbRet.Res = emptyRes
-			break
-		}
-	}
-	//}
-	var rowNum int
-	rowNum, err = finds.Count()
+	dbRet.Res = make([][]byte, rowNum)
+
+	result, err := mysqlService.mysqlModule.Query(request.Sql, request.Args)
 	if err != nil {
-		rpcErr = rpc.RpcError(err.Error())
-		dbRet.Res = emptyRes
-	}
-
-	dbRet.RowNum = int32(rowNum)
-	dbReq.responder(&dbRet, rpcErr)
-}
-
-func (MysqlService *MysqlService) DoUpSet(dbReq DBRequest) (info *mgo.ChangeInfo, err error) {
-	//1.选择数据库与表
-	dataBase := MysqlService.mongoModule.Take().DB(MysqlService.dbName)
-	collect := dataBase.C(dbReq.request.GetCollectName())
-
-	//2.设置数据
-	if len(dbReq.request.Data) != 1 {
-		err := fmt.Errorf("%s DoUpdate data len is error %d.", dbReq.request.CollectName, len(dbReq.request.Data))
-		log.Error(err.Error())
-		return nil, err
-	}
-	var data interface{}
-	err = bson.Unmarshal(dbReq.request.Data[0], &data)
-	if err != nil {
-		err := fmt.Errorf("%s DoInsertUpdate data Unmarshal error %s.", dbReq.request.CollectName, err.Error())
-		log.Error(err.Error())
-		MysqlService.responseRet(dbReq, err, 0)
-		return nil, err
-	}
-
-	//3.设置条件
-	var condition interface{}
-	bson.Unmarshal(dbReq.request.GetCondition(), &condition)
-
-	return collect.Upsert(condition, data)
-}
-
-func (MysqlService *MysqlService) DoInsertUpdate(dbReq DBRequest) {
-	//1.选择数据库与表
-	dataBase := MysqlService.mongoModule.Take().DB(MysqlService.dbName)
-	collect := dataBase.C(dbReq.request.GetCollectName())
-
-	//2.设置数据
-	if len(dbReq.request.Data) != 1 {
-		err := fmt.Errorf("%s DoUpdate data len is error %d.", dbReq.request.CollectName, len(dbReq.request.Data))
-		log.Error(err.Error())
-		MysqlService.responseRet(dbReq, err, 0)
-		return
-	}
-	var data interface{}
-	err := bson.Unmarshal(dbReq.request.Data[0], &data)
-	if err != nil {
-		err := fmt.Errorf("%s DoInsertUpdate data Unmarshal error %s.", dbReq.request.CollectName, err.Error())
-		log.Error(err.Error())
-		MysqlService.responseRet(dbReq, err, 0)
-		return
-	}
-
-	//3.设置条件
-	var condition interface{}
-	bson.Unmarshal(dbReq.request.GetCondition(), &condition)
-	changeInfo, err := collect.Upsert(condition, data)
-
-	if dbReq.responder.IsInvalid() == false {
-		MysqlService.responseRet(dbReq, err, int32(changeInfo.Updated))
-	}
-}
-
-func (MysqlService *MysqlService) DoDel(dbReq DBRequest) {
-	//1.选择数据库与表
-	dataBase := MysqlService.mongoModule.Take().DB(MysqlService.dbName)
-	collect := dataBase.C(dbReq.request.GetCollectName())
-
-	//2.设置条件
-	var condition interface{}
-	bson.Unmarshal(dbReq.request.GetCondition(), &condition)
-	err := collect.Remove(condition)
-	if err != nil {
-		log.Error("%s DoUpdate fail error %s", dbReq.request.CollectName, err.Error())
-	}
-	MysqlService.responseRet(dbReq, err, 0)
-}
-
-func (MysqlService *MysqlService) DoUpdate(dbReq DBRequest) {
-	//1.选择数据库与表
-	dataBase := MysqlService.mongoModule.Take().DB(MysqlService.dbName)
-	collect := dataBase.C(dbReq.request.GetCollectName())
-
-	//2.设置条件
-	var condition interface{}
-	bson.Unmarshal(dbReq.request.GetCondition(), &condition)
-
-	//3.设置数据
-	if len(dbReq.request.Data) != 1 {
-		err := fmt.Errorf("%s DoUpdate data len is error %d.", dbReq.request.CollectName, len(dbReq.request.Data))
-		log.Error(err.Error())
-		MysqlService.responseRet(dbReq, err, 0)
-		return
-	}
-	var data interface{}
-	bson.Unmarshal(dbReq.request.Data[0], &data)
-	//3.更新
-	err := collect.Update(condition, data)
-	if err != nil {
-		log.Error("%s DoUpdate fail error %s", dbReq.request.CollectName, err.Error())
-	}
-
-	if dbReq.responder.IsInvalid() == false {
-		MysqlService.responseRet(dbReq, err, 0)
-	}
-}
-
-
-
-
-func (mysqlService *MysqlService) DoFind(dbReq DBRequest) {
-	//1.选择数据库与表
-	result, err := mysqlService.mysqlModule.Query(dbReq.request.Sql, dbReq.request.Args)
-
-	if err!=nil {
 		fmt.Print(err)
-	}else{
-		dbRet :=
-
-		//从结构集中返序列化数据到结构体切片中，UnMarshal可以支持多个结果集
-		err = result.UnMarshal(&dbRet)
-		if err !=nil {
-			fmt.Print(err)
-		}
-	}
-
-
-	//2.设置条件
-	var dbRet db.DBControllerRet
-	var condition interface{}
-	err := bson.Unmarshal(dbReq.request.GetCondition(), &condition)
-	if err != nil {
-		dbRet.Res = emptyRes
-		dbReq.responder(&dbRet, rpc.RpcError(err.Error()))
-	}
-	finds := collect.Find(condition)
-
-	//3.排序
-	if dbReq.request.GetSort() != "" {
-		finds = finds.Sort(dbReq.request.GetSort())
-	}
-
-	//4.limit
-	var res []interface{}
-	if dbReq.request.GetMaxRow() > 0 {
-		finds = finds.Limit(int(dbReq.request.GetMaxRow()))
-	}
-
-	//5.获取结果集
-	var rpcErr rpc.RpcError
-	if dbReq.request.GetMaxRow() != 0 {
-		finds.All(&res)
-		//序列化结果
-		dbRet.Type = dbReq.request.Type
-		dbRet.Res = make([][]byte, len(res))
-		for i := 0; i < len(res); i++ {
-			dbRet.Res[i], err = bson.Marshal(res[i])
+	} else {
+		if tableName == "User" {
+			var dbRetData []collect.User
+			err = result.UnMarshal(&dbRetData)
 			if err != nil {
-				rpcErr = rpc.RpcError(err.Error())
-				dbRet.Res = emptyRes
-				break
+				fmt.Print(err)
+			}
+			rowNum = len(dbRetData)
+
+			for i := 0; i < rowNum; i++ {
+				dbRet.Res[i], err = json.Marshal(dbRetData[i])
+				if err != nil {
+					rpcErr = rpc.RpcError(err.Error())
+					dbRet.Res = emptyRes
+					break
+				}
 			}
 		}
-	}
-	var rowNum int
-	rowNum, err = finds.Count()
-	if err != nil {
-		rpcErr = rpc.RpcError(err.Error())
-		dbRet.Res = emptyRes
+		//从结构集中返序列化数据到结构体切片中，UnMarshal可以支持多个结果集
 	}
 
 	dbRet.RowNum = int32(rowNum)
 	dbReq.responder(&dbRet, rpcErr)
 }
 
-func (MysqlService *MysqlService) responseRet(dbReq DBRequest, err error, effectRow int32) {
+func (mysqlService *MysqlService) responseRet(dbReq MysqlDBRequest, err error, effectRow int32) {
 	var dbRet db.DBControllerRet
 	if effectRow > 0 {
 		dbRet.RowNum = effectRow
@@ -484,49 +247,38 @@ func (MysqlService *MysqlService) responseRet(dbReq DBRequest, err error, effect
 	}
 }
 
-func (MysqlService *MysqlService) DoInsert(dbReq DBRequest) {
+func (mysqlService *MysqlService) DoInsert(dbReq MysqlDBRequest) {
 	//1.选择数据库与表
-	dataBase := MysqlService.mongoModule.Take().DB(MysqlService.dbName)
-	collect := dataBase.C(dbReq.request.GetCollectName())
+	request := dbReq.request
+	sql := request.Sql
+	args := request.Args
+	exec, err := mysqlService.mysqlModule.Exec(sql, args)
 
-	var data []interface{}
-	data = make([]interface{}, len(dbReq.request.Data))
-	for i := 0; i < len(data); i++ {
-		err := bson.Unmarshal(dbReq.request.Data[i], &data[i])
-		if err != nil {
-			err := fmt.Errorf("%s DoInsert fail %s", dbReq.request.CollectName, err.Error())
-			MysqlService.responseRet(dbReq, err, 0)
-			return
-		}
-	}
-
-	err := collect.Insert(data...)
 	if err != nil {
-		log.Error("%s DoInsert fail error %s", dbReq.request.CollectName, err.Error())
+		log.Error("%s DoInsert fail error %s", dbReq.request.TableName, err.Error())
 	}
-	MysqlService.responseRet(dbReq, err, 0)
+	mysqlService.responseRet(dbReq, err, int32(exec.RowsAffected))
 }
 
-type DBRequest struct {
+type MysqlDBRequest struct {
 	request   *db.MysqlControllerReq
 	responder rpc.Responder
 }
 
-func (MysqlService *MysqlService) RPC_DBRequest(responder rpc.Responder, request *db.DBControllerReq) error {
+func (mysqlService *MysqlService) RPC_MysqlDBRequest(responder rpc.Responder, request *db.MysqlControllerReq) error {
 	log.Release("进入到了MysqlService-RPC_DBRequest")
-	index := request.GetKey() % uint64(MysqlService.goroutineNum)
-	if len(MysqlService.channelOptData[index]) == cap(MysqlService.channelOptData[index]) {
+	index := request.GetKey() % uint64(mysqlService.goroutineNum)
+	if len(mysqlService.channelOptData[index]) == cap(mysqlService.channelOptData[index]) {
 		log.Error("channel is full %d", index)
 
 		responder(nil, rpc.RpcError("channel is full"))
 		return nil
 	}
 
-	var dbRequest DBRequest
+	var dbRequest MysqlDBRequest
 	dbRequest.request = request
 	dbRequest.responder = responder
 
-	MysqlService.channelOptData[index] <- dbRequest
+	mysqlService.channelOptData[index] <- dbRequest
 	return nil
 }
-*/

@@ -5,6 +5,7 @@ import (
 	"github.com/duanhf2012/origin/log"
 	"github.com/duanhf2012/origin/node"
 	"github.com/duanhf2012/origin/service"
+	sync2 "github.com/duanhf2012/origin/util/sync"
 	"github.com/duanhf2012/origin/util/timer"
 	"github.com/golang/protobuf/proto"
 	"sunserver/common/entity"
@@ -32,7 +33,9 @@ type protoMsg struct {
 }
 
 func (m *protoMsg) Reset() {
-	m.msg.Reset()
+	if m.msg != nil {
+		m.msg.Reset()
+	}
 }
 
 func (m *protoMsg) IsRef() bool {
@@ -49,7 +52,7 @@ func (m *protoMsg) UnRef() {
 
 type RegMsgInfo struct {
 	protoMsg    *protoMsg
-	msgPool     *sync.Pool
+	msgPool     *sync2.PoolEx
 	msgCallBack msghandler.CallBack
 }
 
@@ -66,13 +69,11 @@ func RegisterMessage(msgType msg.MsgType, message proto.Message, cb msghandler.C
 	var regMsgInfo RegMsgInfo
 	regMsgInfo.protoMsg = &protoMsg{}
 	regMsgInfo.protoMsg.msg = message
-	regMsgInfo.msgPool = &sync.Pool{
-		New: func() interface{} {
-			protoMsg := protoMsg{}
-			protoMsg.msg = proto.Clone(regMsgInfo.protoMsg.msg)
-			return &protoMsg
-		},
-	}
+	regMsgInfo.msgPool = sync2.NewPoolEx(make(chan sync2.IPoolData, 1000), func() sync2.IPoolData {
+		protoMsg := protoMsg{}
+		protoMsg.msg = proto.Clone(regMsgInfo.protoMsg.msg)
+		return &protoMsg
+	})
 	regMsgInfo.msgCallBack = cb
 	roomService.mapRegisterMsg[msgType] = &regMsgInfo
 }
@@ -82,7 +83,7 @@ type RoomService struct {
 
 	mapRegisterMsg map[msg.MsgType]*RegMsgInfo //消息注册
 	// k 为 userId
-	room           map[string]*common.Room //在线房间数 还有房主信息
+	room map[string]*common.Room //在线房间数 还有房主信息
 
 	cycleDo *cycledo.RoomInterface
 
@@ -140,7 +141,7 @@ func (cb *RpcOnRecvCallBack) Unmarshal(data []byte) (interface{}, error) {
 	}
 
 	protoMsg := msgInfo.NewMsg()
-	if protoMsg.msg !=nil {
+	if protoMsg.msg != nil {
 		err = proto.Unmarshal(data[2+len(clientIdList)*8:], protoMsg.msg)
 		if err != nil {
 			err = fmt.Errorf("message type %d is not  register.", rawInput.GetMsgType())
@@ -164,7 +165,6 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 		return
 	}
 
-
 	msgType := msg.MsgType(args.GetMsgType())
 
 	msgInfo, ok := roomService.mapRegisterMsg[msgType]
@@ -172,7 +172,7 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 		log.Warning("close client %d,message type %d is not  register.", clientIdList[0], msgType)
 		return
 	}
-	msgInfo.msgCallBack(roomService.cycleDo,clientIdList[0], args.GetProtoMsg().(*protoMsg).msg)
+	msgInfo.msgCallBack(roomService.cycleDo, clientIdList[0], args.GetProtoMsg().(*protoMsg).msg)
 	msgInfo.ReleaseMsg(args.GetProtoMsg().(*protoMsg))
 }
 
@@ -196,13 +196,12 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 	}
 }*/
 
-func (rs *RoomService) FmtRoom(timer *timer.Ticker)  {
+func (rs *RoomService) FmtRoom(timer *timer.Ticker) {
 	log.Release("打印房间---------")
 	for k, v := range rs.room {
-		log.Release("room 房间号--%s,用户数--%d,owner--%d",k,v.GetRoomClientNum(),v.GetOwner().GetUserId())
+		log.Release("room 房间号--%s,用户数--%d,owner--%d", k, v.GetRoomClientNum(), v.GetOwner().GetUserId())
 	}
 }
-
 
 func (rs *RoomService) CheckOnline(clientId uint64) bool {
 	log.Release("roomService-CheckOnline")
@@ -247,7 +246,7 @@ func (rs *RoomService) GetRoom(roomUuid string) (*common.Room, bool) {
 	return room, ok
 }
 
-func (rs *RoomService) RPC_GetPbRoom(req *rpc.GetRoomReq,res *rpc.GetRoomRes) error {
+func (rs *RoomService) RPC_GetPbRoom(req *rpc.GetRoomReq, res *rpc.GetRoomRes) error {
 	roomUuid := req.GetRoomUuid()
 	room := rs.room[roomUuid]
 	res.Room = rs.PackRpcRoom(room)
@@ -302,7 +301,7 @@ func (rs *RoomService) PackRpcPlayerInfo(info *entity.PlayerInfo) *rpc.PlayerInf
 func (rs *RoomService) PackRoom(room *common.Room) *msg.Room {
 	owner := rs.PackPlayerInfo(room.GetOwner())
 	otherClients := room.GetOtherClients()
-	playerInfos := make([]*msg.PlayerInfo,0)
+	playerInfos := make([]*msg.PlayerInfo, 0)
 	for _, client := range otherClients {
 		playerInfos = append(playerInfos, rs.PackPlayerInfo(client))
 	}
@@ -312,14 +311,12 @@ func (rs *RoomService) PackRoom(room *common.Room) *msg.Room {
 func (rs *RoomService) PackRpcRoom(room *common.Room) *rpc.Room {
 	owner := rs.PackRpcPlayerInfo(room.GetOwner())
 	otherClients := room.GetOtherClients()
-	playerInfos := make([]*rpc.PlayerInfo,0)
+	playerInfos := make([]*rpc.PlayerInfo, 0)
 	for _, client := range otherClients {
 		playerInfos = append(playerInfos, rs.PackRpcPlayerInfo(client))
 	}
 	return &rpc.Room{Uuid: room.GetUUid(), RoomName: room.GetRoomName(), RoomType: room.GetRoomType(), AvgRank: room.GetAvgRank(), RoomClientNum: room.GetRoomClientNum(), Owner: owner, OtherClients: playerInfos}
 }
-
-
 
 /*func (rs *RoomService) RPC_RemoveRoom(clientId uint64) {
 	log.Release("移除房间--%d", clientId)
@@ -334,13 +331,13 @@ func (rs *RoomService) RemoveRoom(roomUuid string) {
 	delete(rs.room, roomUuid)
 }
 
-func (rs *RoomService) RadioPlayerInfo(room *common.Room)  {
-	playerInfos := make([]*entity.PlayerInfo,0)
-	resPlayers := make([]*msg.PlayerInfo,0)
-	playerInfos = append(playerInfos,room.GetOwner())
-	playerInfos = append(playerInfos,room.GetOtherClients()...)
+func (rs *RoomService) RadioPlayerInfo(room *common.Room) {
+	playerInfos := make([]*entity.PlayerInfo, 0)
+	resPlayers := make([]*msg.PlayerInfo, 0)
+	playerInfos = append(playerInfos, room.GetOwner())
+	playerInfos = append(playerInfos, room.GetOtherClients()...)
 	for _, user := range playerInfos {
-		resPlayers = append(resPlayers,rs.PackPlayerInfo(user))
+		resPlayers = append(resPlayers, rs.PackPlayerInfo(user))
 	}
 	//向房间里面的所有人广播
 	for _, user := range playerInfos {
@@ -364,4 +361,3 @@ func (rs *RoomService) NewPlayerInfo(playerInfoPb *msg.PlayerInfo) *entity.Playe
 	playerInfo.SetUserId(playerInfoPb.GetUserId())
 	return playerInfo
 }
-

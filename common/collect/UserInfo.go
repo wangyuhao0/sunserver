@@ -13,11 +13,11 @@ type CUserInfo struct {
 	PlatId   string `bson:"PlatId"`   //平台id
 	SyncTime int64  `bson:"SyncTime"` //客户端同步时间——测试
 	Rank     uint64 `bson:"Rank"`     //排位分
-	Coin     uint64 `bson:"PlatType"` //金币
+	Coin     uint64 `bson:"Coin"`     //金币
 	NickName string `bson:"NickName"` //NickName
-	Avatar   string `bson:"Avatar"` //头像
-	Sex      int `bson:"PlatType"` //性别
-	Grade    int `bson:"Grade"` // 等级
+	Avatar   string `bson:"Avatar"`   //头像
+	Sex      int    `bson:"PlatType"` //性别
+	Grade    int    `bson:"Grade"`    // 等级
 }
 
 var nameUserInfo = "UserInfo"

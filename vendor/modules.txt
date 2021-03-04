@@ -12,6 +12,7 @@ github.com/duanhf2012/origin/rpc
 github.com/duanhf2012/origin/service
 github.com/duanhf2012/origin/sysmodule/httpclientmodule
 github.com/duanhf2012/origin/sysmodule/mongomodule
+github.com/duanhf2012/origin/sysmodule/mysqlmondule
 github.com/duanhf2012/origin/sysmodule/redismodule
 github.com/duanhf2012/origin/sysservice/httpservice
 github.com/duanhf2012/origin/sysservice/tcpservice
@@ -19,6 +20,8 @@ github.com/duanhf2012/origin/util/coroutine
 github.com/duanhf2012/origin/util/sync
 github.com/duanhf2012/origin/util/timer
 github.com/duanhf2012/origin/util/uuid
+# github.com/go-sql-driver/mysql v1.5.0
+github.com/go-sql-driver/mysql
 # github.com/gogo/protobuf v1.3.2
 ## explicit
 github.com/gogo/protobuf/proto
