@@ -25,6 +25,8 @@ message LoginInfo{
   LoginType PlatType     = 1;
   string    PlatId       = 2;
   string    AccessToken  = 3;
+  string  PassWord = 4;
+  string  Account = 5;
 }
 
 //数据库返回结果

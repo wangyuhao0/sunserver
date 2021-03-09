@@ -357,7 +357,6 @@ func (mongoService *MongoService) DoFind(dbReq MongoDBRequest) {
 	//1.选择数据库与表
 	dataBase := mongoService.mongoModule.Take().DB(mongoService.dbName)
 	collect := dataBase.C(dbReq.request.GetCollectName())
-
 	//2.设置条件
 	var dbRet db.DBControllerRet
 	var condition interface{}

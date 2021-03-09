@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sunserver/common/global"
 	"time"
+	"unsafe"
 )
-
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -20,15 +20,15 @@ func init() {
 
 func GetMasterCenterNodeId() int {
 	var clientList [4]*rpc.Client
-	err,num :=cluster.GetCluster().GetNodeIdByService(global.CenterService,clientList[:],false)
+	err, num := cluster.GetCluster().GetNodeIdByService(global.CenterService, clientList[:], false)
 	if err != nil || num == 0 {
 		return 0
 	}
 
 	minId := 0
-	for i:=0;i<num;i++{
-		if clientList[i]!= nil {
-			if minId==0 || clientList[i].GetId()<minId {
+	for i := 0; i < num; i++ {
+		if clientList[i] != nil {
+			if minId == 0 || clientList[i].GetId() < minId {
 				minId = clientList[i].GetId()
 			}
 		}
@@ -39,15 +39,15 @@ func GetMasterCenterNodeId() int {
 
 func GetNodeIdByService(name string) int {
 	var clientList [4]*rpc.Client
-	err,num :=cluster.GetCluster().GetNodeIdByService(name,clientList[:],false)
+	err, num := cluster.GetCluster().GetNodeIdByService(name, clientList[:], false)
 	if err != nil || num == 0 {
 		return 0
 	}
 
 	minId := 0
-	for i:=0;i<num;i++{
-		if clientList[i]!= nil {
-			if minId==0 || clientList[i].GetId()<minId {
+	for i := 0; i < num; i++ {
+		if clientList[i] != nil {
+			if minId == 0 || clientList[i].GetId() < minId {
 				minId = clientList[i].GetId()
 			}
 		}
@@ -59,15 +59,15 @@ func GetNodeIdByService(name string) int {
 //主从centerService，后续实现
 func GetSlaveCenterNodeId() int {
 	var clientList [4]*rpc.Client
-	err,num :=cluster.GetCluster().GetNodeIdByService("CenterService",clientList[:],false)
+	err, num := cluster.GetCluster().GetNodeIdByService("CenterService", clientList[:], false)
 	if err != nil || num == 0 {
 		return 0
 	}
 
 	minId := 0
-	for i:=0;i<num;i++{
-		if clientList[i]!= nil {
-			if minId==0 || clientList[i].GetId()<minId {
+	for i := 0; i < num; i++ {
+		if clientList[i] != nil {
+			if minId == 0 || clientList[i].GetId() < minId {
 				minId = clientList[i].GetId()
 			}
 		}
@@ -76,14 +76,14 @@ func GetSlaveCenterNodeId() int {
 	return minId
 }
 
-func GetBestNodeId(serviceMethod string,key uint64) int {
+func GetBestNodeId(serviceMethod string, key uint64) int {
 	var clientList [4]*rpc.Client
-	err,num := cluster.GetRpcClient(0,serviceMethod,clientList[:])
+	err, num := cluster.GetRpcClient(0, serviceMethod, clientList[:])
 	if err != nil || num == 0 {
 		return 0
 	}
 
-	return clientList[key % uint64(num)].GetId()
+	return clientList[key%uint64(num)].GetId()
 }
 
 func RandNum(max int) int {
@@ -92,7 +92,7 @@ func RandNum(max int) int {
 }
 
 func RandNumRange(min, max int64) int64 {
-	r := rand.Int63n(max-min)
+	r := rand.Int63n(max - min)
 	return r + min
 }
 
@@ -166,4 +166,14 @@ func HashString2Number(s string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(s))
 	return h.Sum32()
+}
+
+func Str2bytes(s string) []byte {
+	x := (*[2]uintptr)(unsafe.Pointer(&s))
+	h := [3]uintptr{x[0], x[1], x[1]}
+	return *(*[]byte)(unsafe.Pointer(&h))
+}
+
+func Bytes2str(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }

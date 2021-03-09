@@ -13,6 +13,7 @@ enum OptType {
     Del    = 8;
     Upset  = 16;
     SetOnInsert = 32;
+    InsertNoFallBack = 64;
 }
 
 message DBControllerReq {

@@ -70,9 +70,6 @@ func (botModule *BotModule) OnInit() error {
 	return nil
 }
 
-
-
-
 func (botModule *BotModule) Start() {
 	go botModule.RunBot()
 }
@@ -198,7 +195,7 @@ func (botModule *BotModule) checkRunStatus() {
 }
 
 func (botModule *BotModule) loginHttpGate() {
-	loginBody := fmt.Sprintf(`{"PlatType":1, "PlatId":"%s", "AccessToken":"%s"}`, botModule.data.BotName, botModule.data.BotName)
+	loginBody := fmt.Sprintf(`{"PlatType":1, "PlatId":"%s", "AccessToken":"%s","Account":"%s","PassWord":"%s"}`, botModule.data.BotName, botModule.data.BotName, botModule.data.BotName, botModule.data.BotName)
 
 	response := botModule.httpClient.Request(http.MethodPost, botModule.LoginUrl, []byte(loginBody), nil)
 	if response.Err != nil {

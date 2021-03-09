@@ -1,5 +1,6 @@
 syntax = "proto3";
 import "proto/msgproto/errcode.proto";
+import "proto/msgproto/playerinfo.proto";
 package msg;
 option go_package = ".;msg";
 
@@ -16,6 +17,25 @@ message MsgAddTableRes{
 message MsgClientConnectedStatusRes{
   ErrCode Ret = 1; //0 成功
 }
+
+message MsgCreateTableReq{
+  uint64 UserId = 1;
+  int32 GameTypeId = 2;
+}
+
+message MsgCreateTableRes{
+  repeated TableGeneral tableList = 1;
+}
+//对局桌子简约版
+message TableGeneral{
+  int32 GameTypeId = 1; //游戏类型
+  repeated PlayerInfo playList= 2;
+  int32 MatchNum = 3; //第几局
+  uint64 tableIdUuid = 4; //桌子号
+}
+
+
+
 
 
 

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func init(){
+func init() {
 	node.Setup(&AuthService{})
 }
 
@@ -19,7 +19,7 @@ type AuthService struct {
 
 func (auth *AuthService) OnInit() error {
 	cfg := auth.GetServiceCfg().(map[string]interface{})
-	v,ok := cfg["GoRoutineNum"]
+	v, ok := cfg["GoRoutineNum"]
 	if ok == false {
 		return fmt.Errorf("Cannot find authService.goRoutineNum config!")
 	}
@@ -33,7 +33,7 @@ func (auth *AuthService) OnInit() error {
 	return nil
 }
 
-func (auth *AuthService) RPC_Check(loginInfo *rpc.LoginInfo,loginResult *rpc.LoginResult) error{
+func (auth *AuthService) RPC_Check(loginInfo *rpc.LoginInfo, loginResult *rpc.LoginResult) error {
 	//loginResult.Ret = 0
 	log.Release("进入到了AuthService-RPC_Check")
 	/*var req db.RedisControllerReq
@@ -51,6 +51,10 @@ func (auth *AuthService) RPC_Check(loginInfo *rpc.LoginInfo,loginResult *rpc.Log
 			loginResult.PlatType = loginInfo.PlatType
 			return
 		}
+		loginResult.Ret = 1
+		loginResult.AccessToken = util.Bytes2str(res.Res)
+		loginResult.PlatId = loginInfo.PlatId
+		loginResult.PlatType = loginInfo.PlatType
 	})
 
 	if err!=nil {
