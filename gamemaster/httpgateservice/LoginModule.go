@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"sunserver/common/collect"
-	"sunserver/common/constPackage"
+	"sunserver/common/const"
 	"sunserver/common/db"
 	"sunserver/common/proto/msg"
 	"sunserver/common/proto/rpc"
@@ -138,11 +138,8 @@ func (login *LoginModule) choseServer(session *httpservice.HttpSession, user *co
 		//存入 redis 数据缓存
 		//异步存储
 		var req db.RedisControllerReq
-		req.Type = db.OptType_InsertNoFallBack
-		req.RKey = constpackage.UserRedisKey + res.Token
-		req.Key = uint64(util.HashString2Number(loginInfo.PlatId))
 		data, err := json.Marshal(user)
-		req.RValue = string(data)
+		db.MakeRedis(db.OptType_InsertNoFallBack, constpackage.UserRedisKey+res.Token, uint64(util.HashString2Number(loginInfo.PlatId)), string(data), &req)
 		err = login.GoNode(redisNodeId, "RedisService.RPC_InitDataRequest", &req)
 		if err != nil {
 			log.Error("set Redis fail %d!", res.Ret)
@@ -166,11 +163,7 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 	account := loginInfo.Account
 	passWord := loginInfo.PassWord
 	var mysqlData db.MysqlControllerReq
-	mysqlData.TableName = "user"
-	mysqlData.Key = uint64(util.HashString2Number(loginInfo.PlatId))
-	mysqlData.Sql = constpackage.LoginSql
-	mysqlData.Args = []string{account, passWord}
-	mysqlData.Type = db.OptType_Find
+	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), constpackage.LoginSql, []string{account, passWord}, db.OptType_Find, &mysqlData)
 	err := login.GetService().GetRpcHandler().AsyncCall("MysqlService.RPC_MysqlDBRequest", &mysqlData, func(ret *db.MysqlControllerRet, err error) {
 		//返回账号创建结果
 		var user collect.User
@@ -187,11 +180,9 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 			//代表不存在 初始化
 			log.Release("初始化用户------")
 			var mysqlData db.MysqlControllerReq
-			mysqlData.TableName = "user"
-			mysqlData.Key = uint64(util.HashString2Number(loginInfo.PlatId))
-			mysqlData.Sql = "insert `user`(nick_name,account,`password`,create_time) values(?,?,?,?)"
-			mysqlData.Args = []string{account, account, passWord, strconv.FormatInt(timer.Now().Unix(), 10)}
-			mysqlData.Type = db.OptType_Insert
+			sql := "insert `user`(nick_name,account,`password`,create_time,last_login_time,is_login) values(?,?,?,?,)"
+			args := []string{account, account, passWord, strconv.FormatInt(timer.Now().Unix(), 10), strconv.FormatInt(timer.Now().Unix(), 10), "1"}
+			db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), sql, args, db.OptType_Insert, &mysqlData)
 			err := login.GetService().GetRpcHandler().AsyncCall("MysqlService.RPC_MysqlDBRequest", &mysqlData, func(ret *db.MysqlControllerRet, err error) {
 				//返回账号创建结果
 				if err != nil {
@@ -217,12 +208,41 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 			}
 
 		} else {
-			log.Release("更新用户------")
 			//先处理原数据
 			err = json.Unmarshal(ret.Res[0], &user)
 			if err != nil {
 				login.WriteResponseError(session, msg.ErrCode_InterNalError)
 				log.Error("Unmarshal fail %s,platid:%s!", err.Error(), platId)
+				return
+			}
+			user.IsLogin = 1
+			user.LastLoginTime = timer.Now().Unix()
+
+			log.Release("更新用户------")
+			var mysqlData db.MysqlControllerReq
+			sql := "update `user` set last_login_time = ?,is_login=? where id = ?"
+			args := []string{strconv.FormatInt(timer.Now().Unix(), 10), "1", strconv.FormatUint(user.Id, 10)}
+			db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), sql, args, db.OptType_Update, &mysqlData)
+			err := login.GetService().GetRpcHandler().AsyncCall("MysqlService.RPC_MysqlDBRequest", &mysqlData, func(ret *db.MysqlControllerRet, err error) {
+				//返回账号创建结果
+				if err != nil {
+					login.WriteResponseError(session, msg.ErrCode_InterNalError)
+					if err != nil {
+						log.Error("Call MysqlService.RPC_MysqlDBRequest platid:%s, fail %s!", platId, err.Error())
+					} else {
+						log.Error("Call MysqlService.RPC_MysqlDBRequest platid:%s, fail res is empty!", platId)
+					}
+					return
+				}
+				if ret.RowNum < 1 {
+					login.WriteResponseError(session, msg.ErrCode_InterNalError)
+					log.Error("update user fail %s,platid:%s!", err.Error(), platId)
+					return
+				}
+			})
+			if err != nil {
+				login.WriteResponseError(session, msg.ErrCode_InterNalError)
+				log.Error("Call MysqlService.RPC_MysqlDBRequest platid:%s, fail %s!", err.Error(), platId)
 				return
 			}
 		}

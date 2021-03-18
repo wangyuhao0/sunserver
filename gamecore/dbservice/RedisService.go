@@ -170,7 +170,7 @@ func (redisService *RedisService) DoDel(dbReq RedisRequest) {
 }
 
 func (redisService *RedisService) responseRet(dbReq RedisRequest, err error, effectRow int32) {
-	var dbRet db.DBControllerRet
+	var dbRet db.RedisControllerRet
 	if effectRow > 0 {
 		dbRet.RowNum = effectRow
 	}

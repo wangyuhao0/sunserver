@@ -13,7 +13,10 @@ import (
 	sync2 "github.com/duanhf2012/origin/util/sync"
 	"github.com/duanhf2012/origin/util/timer"
 	"github.com/golang/protobuf/proto"
+	"strconv"
 	"sunserver/common/configdef"
+	"sunserver/common/const"
+	"sunserver/common/db"
 	"sunserver/common/global"
 	"sunserver/common/module"
 	"sunserver/common/proto/msg"
@@ -258,9 +261,9 @@ func (ps *PlayerService) CloseClient(clientId uint64) {
 	inputArgs.SetUint64(clientId)
 	ps.RawGoNode(originrpc.RpcProcessorGoGoPB, nodeId, global.RawRpcCloseClient, global.GateService, &inputArgs)
 	//通知房间如果有就下线
-	var inputArgss global.RawInputArgs
-	inputArgss.SetUint64(clientId)
-	ps.RawGoNode(originrpc.RpcProcessorGoGoPB, nodeId, global.RawRpcCloseClient, global.GateService, &inputArgss)
+	//var inputArgss global.RawInputArgs
+	//inputArgss.SetUint64(clientId)
+	//ps.RawGoNode(originrpc.RpcProcessorGoGoPB, nodeId, global.RawRpcCloseClient, global.GateService, &inputArgss)
 	delete(ps.mapClientPlayer, clientId)
 }
 
@@ -278,8 +281,14 @@ func (ps *PlayerService) RPCOnClose(byteBuffer []byte) {
 		log.Warning("Cannot find clientId %d.", clientId)
 		return
 	}
-
 	v.SetOnline(false)
+	//发送给数据库
+	var mysqlData db.MysqlControllerReq
+	sql := "update `user` set last_login_time = ?,is_login=? where id = ?"
+	args := []string{strconv.FormatInt(timer.Now().Unix(), 10), "0", strconv.FormatUint(v.Id, 10)}
+	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(v.PlatId)), sql, args, db.OptType_Update, &mysqlData)
+	ps.SendMsgToMysql(&mysqlData)
+
 	//往队列服发送通知下线
 	//ps.UpdateBalanceQueue(clientId,2)
 	return
@@ -439,6 +448,12 @@ func (ps *PlayerService) ResetConn(cliId uint64, userId uint64, fromGateId int, 
 	p.SetOnline(true)
 	// 往队列服发送信息 重新连接登录的
 	//ps.UpdateBalanceQueue(cliId,1)
+	var mysqlData db.MysqlControllerReq
+	mysqlData.TableName = constpackage.UserTableName
+	sql := "update `user` set last_login_time = ?,is_login=? where id = ?"
+	args := []string{strconv.FormatInt(timer.Now().Unix(), 10), "1", strconv.FormatUint(userId, 10)}
+	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(p.PlatId)), sql, args, db.OptType_Update, &mysqlData)
+	ps.SendMsgToMysql(&mysqlData)
 }
 
 func (ps *PlayerService) TimerAfter(userId uint64, d time.Duration, cb func(ticker *timer.Timer)) *timer.Timer {
@@ -589,7 +604,6 @@ func (ps *PlayerService) OnRpcConnected(nodeId int) {
 		ps.GoNode(nodeId, "CenterService.RPC_UpdateUserList", &playerList)
 		//向队列服同步信息
 		//ps.updateBalanceQueue()
-
 	}
 }
 
@@ -607,4 +621,9 @@ func (ps *PlayerService) ConfigComplete(ev event.IEvent) {
 	for _, fileItem := range loadFileList {
 		ps.cfgModule.SetLogicConfig(fileItem.FileName, fileItem.Record)
 	}
+}
+
+func (ps *PlayerService) SendMsgToMysql(req *db.MysqlControllerReq) {
+	mysqlServiceNodeId := util.GetNodeIdByService("MysqlService")
+	ps.GoNode(mysqlServiceNodeId, "MysqlService.RPC_MysqlDBRequest", req)
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/duanhf2012/origin/sysmodule/mysqlmondule"
 	"runtime"
 	"sunserver/common/collect"
-	"sunserver/common/constPackage"
+	"sunserver/common/const"
 	"sunserver/common/db"
 	"sync/atomic"
 	"time"
@@ -290,7 +290,7 @@ func (mysqlService *MysqlService) DoInsert(dbReq MysqlDBRequest) {
 }
 
 func (mysqlService *MysqlService) responseRet(dbReq MysqlDBRequest, err error, effectRow int32) {
-	var dbRet db.DBControllerRet
+	var dbRet db.MysqlControllerRet
 	if effectRow > 0 {
 		dbRet.RowNum = effectRow
 	}

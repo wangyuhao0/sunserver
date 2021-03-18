@@ -12,4 +12,6 @@ message PlayerInfo{
   uint64 clientId = 6;
   bool isOwner = 7;
   int32 seatNum = 8;
+  int32 isLogin = 9;
+  int64 lastLoginTime = 10;
 }
