@@ -14,9 +14,20 @@ message MsgCreateRoomRes{
   string  RoomUuid = 2;
 }
 
+
+message MsgRoomListReq{
+  int32 RoomType = 1;
+}
+
+message MsgRoomListRes{
+  ErrCode Ret = 1;
+  repeated SimpleRoom roomList = 2;
+}
+
 message MsgAddRoomReq{
   string  RoomUuid = 1;
-  PlayerInfo PlayerInfo = 2;
+  int32  RoomType = 2;
+  PlayerInfo PlayerInfo = 3;
 }
 
 message MsgAddRoomRes{
@@ -32,6 +43,7 @@ message MsgClientOnRoomRes{
 
 message MsgQuitRoomReq{
   string  RoomUuid = 1;
+  int32  RoomType = 2;
 }
 
 message MsgQuitRoomRes{
@@ -56,5 +68,12 @@ message Room{
   PlayerInfo Owner = 6;
   repeated PlayerInfo OtherClients = 7;
 }
-
+//简化版room数据
+message SimpleRoom{
+  string Uuid = 1;
+  string RoomName = 2 ;
+  int32 RoomType = 3;
+  uint64 AvgRank = 4 ;
+  int32 RoomClientNum = 5;
+}
 

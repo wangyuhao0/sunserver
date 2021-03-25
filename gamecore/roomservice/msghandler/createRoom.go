@@ -9,7 +9,7 @@ import (
 	"sunserver/gamecore/roomservice/cycledo"
 )
 
-func handlerClientCreateRoom(ri *cycledo.RoomInterface,clientId uint64, message proto.Message) {
+func handlerClientCreateRoom(ri *cycledo.RoomInterface, clientId uint64, message proto.Message) {
 	log.Release("roomService-createRoom")
 	msgReq := message.(*msg.MsgCreateRoomReq)
 	playerInfoPb := msgReq.GetPlayerInfo()
@@ -28,7 +28,7 @@ func handlerClientCreateRoom(ri *cycledo.RoomInterface,clientId uint64, message 
 
 	uuid := uuid.Rand().HexEx()
 	newRoom.OnInit(ri.GetProxyRi(), uuid, "testRoom"+strconv.FormatUint(userId, 10), 1, playerInfo, roomType)
-	ri.SetRoomRi(uuid, newRoom)
+	ri.SetRoomRi(uuid, roomType, newRoom)
 	//通知客户端
 	newRoom.SendToClient(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_OK, RoomUuid: uuid})
 

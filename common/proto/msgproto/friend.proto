@@ -6,9 +6,8 @@ option go_package = ".;msg";
 
 
 message MsgFriendListReq{
-
   uint64 UserId = 1;
-
+  string PlatId = 2;
 }
 
 message MsgFriendListRes{
@@ -31,6 +30,7 @@ message MsgSearchFriendRes{
 message AddFriendReq{
   int32 UserId = 1;
   int32 AddUserId = 2; //被添加的用户id
+  string PlatId = 3;
 }
 
 message AddFriendRes{
@@ -43,6 +43,7 @@ message AddFriendRes{
 message RemoveFriendReq{
   int32 UserId = 1;
   int32 DelUserId = 2; //被移除的用户id
+  string PlatId = 3;
 }
 
 //通知被移除用户  和 移除发起者  先查看被移除用户是否在线 不在线就不推送
@@ -69,6 +70,7 @@ message MsgNoticeFriendOffLine{
 message Friend{
   PlayerInfo playerInfo = 1;
   int32 status = 2; //上下线状态 1 上线 0 下线
+  int64 lastLoginTime = 3;
 }
 
 

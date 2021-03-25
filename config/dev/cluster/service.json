@@ -7,11 +7,11 @@
       "MaxConnect": 5000,
       "MsgRouter": [
         {
-          "MsgId": "1-9999",
+          "MsgId": "1-10000",
           "ServiceName": "PlayerService"
         },
         {
-          "MsgId": "10000-20000",
+          "MsgId": "10001-20000",
           "ServiceName": "RoomService"
         },
         {
@@ -21,6 +21,10 @@
         {
           "MsgId": "30001-40000",
           "ServiceName": "TableService"
+        },
+        {
+          "MsgId": "40001-50000",
+          "ServiceName": "FriendService"
         }
       ]
     },
@@ -80,6 +84,25 @@
       "MaxActive": 100,
       "GoroutineNum": 2,
       "ChannelNum": 5000
+    },
+    "RoomService": {
+        "Room":[
+          {
+            "RoomType": 1,
+            "UserNum": 5,
+            "RoomNum": 3000
+          },
+          {
+            "RoomType": 2,
+            "UserNum": 3,
+            "RoomNum": 3000
+          },
+          {
+            "RoomType": 3,
+            "UserNum": 2,
+            "RoomNum": 3000
+          }
+        ]
     },
     "QueueService": {
       "MaxQueueNum": 5000,

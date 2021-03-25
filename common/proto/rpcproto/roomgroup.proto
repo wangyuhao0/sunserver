@@ -18,6 +18,7 @@ message AddGroupRet{
 // QueueService->RoomService 获取某个房间信息
 message GetRoomReq{
   string RoomUuid = 1;
+  int32 RoomType = 2;
 }
 message GetRoomRes{
   Room room = 1;

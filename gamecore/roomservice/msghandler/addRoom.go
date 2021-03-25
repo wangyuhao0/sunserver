@@ -7,14 +7,15 @@ import (
 	"sunserver/gamecore/roomservice/cycledo"
 )
 
-func handlerClientAddRoom(ri *cycledo.RoomInterface,clientId uint64, message proto.Message) {
+func handlerClientAddRoom(ri *cycledo.RoomInterface, clientId uint64, message proto.Message) {
 	log.Release("roomService-createRoom")
 
 	msgReq := message.(*msg.MsgAddRoomReq)
 	roomUuid := msgReq.GetRoomUuid()
+	roomType := msgReq.GetRoomType()
 	info := msgReq.GetPlayerInfo()
 	//登录平台了 然后创建房间放入
-	room, ok := ri.GetRoomRi(roomUuid)
+	room, ok := ri.GetRoomRi(roomUuid, roomType)
 	if !ok {
 		log.Release("房间不存在%s", room)
 		//不存在
@@ -23,13 +24,13 @@ func handlerClientAddRoom(ri *cycledo.RoomInterface,clientId uint64, message pro
 	}
 	otherClients := room.GetOtherClients()
 	for _, v := range otherClients {
-		if clientId == v.GetClientId(){
+		if clientId == v.GetClientId() {
 			log.Release("重复加入房间")
 			return
 		}
 	}
 	//平衡一下房间的平均分
-	room.SetAvgRank(room.GetAvgRank()* (uint64(room.GetRoomClientNum())+info.GetRank())/uint64(room.GetRoomClientNum()+1))
+	room.SetAvgRank(room.GetAvgRank() * (uint64(room.GetRoomClientNum()) + info.GetRank()) / uint64(room.GetRoomClientNum()+1))
 	//放入道理吗
 	playerInfo := ri.NewPlayerInfoRi(info)
 	//查看房间有几个人 以及其他人的座位号
@@ -40,7 +41,7 @@ func handlerClientAddRoom(ri *cycledo.RoomInterface,clientId uint64, message pro
 	playerInfo.SetClientId(clientId)
 	//增加人数
 	num := room.GetRoomClientNum()
-	room.SetRoomClientNum(num+1)
+	room.SetRoomClientNum(num + 1)
 	// 增加用户
 	otherClients = append(otherClients, playerInfo)
 	room.SetOtherClients(otherClients)

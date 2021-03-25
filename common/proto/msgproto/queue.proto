@@ -5,7 +5,8 @@ option go_package = ".;msg";
 
 message MsgAddQueueReq{
   string RoomUuid = 1;
-  uint64 UserId = 2;
+  int32 RoomType = 2;
+  uint64 UserId = 3;
 }
 
 message MsgAddQueueRes{
@@ -14,7 +15,8 @@ message MsgAddQueueRes{
 
 message MsgQuitQueueReq{
   string RoomUuid = 1;
-  uint64 UserId = 2;
+  int32 RoomType = 2;
+  uint64 UserId = 3;
 }
 
 message MsgQuitQueueRes{

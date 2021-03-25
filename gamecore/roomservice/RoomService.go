@@ -82,8 +82,11 @@ type RoomService struct {
 	service.Service
 
 	mapRegisterMsg map[msg.MsgType]*RegMsgInfo //消息注册
-	// k 为 userId
-	room map[string]*common.Room //在线房间数 还有房主信息
+	// k 为 roomUuid
+
+	//第一个k为房间类型 第二个key 房间号 做房间类型区分
+	room map[int32]map[string]*common.Room //
+	//room map[string]*common.Room //在线房间数 还有房主信息
 
 	cycleDo *cycledo.RoomInterface
 
@@ -92,7 +95,8 @@ type RoomService struct {
 
 func (rs *RoomService) OnInit() error {
 	//1.初始化变量与模块
-	rs.room = make(map[string]*common.Room, 3000)
+	rs.room = make(map[int32]map[string]*common.Room)
+
 	rs.mapRegisterMsg = make(map[msg.MsgType]*RegMsgInfo, 512)
 	roomPool = sync.Pool{New: func() interface{} {
 		return &common.Room{}
@@ -104,7 +108,7 @@ func (rs *RoomService) OnInit() error {
 	rs.AddModule(rs.gateProxy)
 	//2.设置注册函数回调
 	msghandler.OnRegisterMessage(RegisterMessage)
-
+	rs.OnLoadCfg()
 	rs.OpenProfiler()
 	rs.GetProfiler().SetOverTime(time.Millisecond * 50)
 	rs.GetProfiler().SetMaxOverTime(time.Second * 10)
@@ -117,6 +121,54 @@ func (rs *RoomService) OnInit() error {
 	roomInterface := cycledo.New(rs)
 	rs.cycleDo = roomInterface
 	return nil
+}
+
+func (rs *RoomService) OnLoadCfg() {
+
+	//写死3种
+	/*	rs.room[1] = make(map[string]*common.Room,3000)
+		rs.room[2] = make(map[string]*common.Room,3000)
+		rs.room[3] = make(map[string]*common.Room,3000)*/
+
+	cfg := rs.GetServiceCfg()
+	configMap, ok := cfg.(map[string]interface{})
+
+	room, ok := configMap["Room"]
+	if ok == false {
+		return
+	}
+
+	roomList, ok := room.([]interface{})
+	if ok == false {
+		//error...
+		return
+	}
+
+	for _, v := range roomList {
+		mapItem := v.(map[string]interface{})
+		var iRoomType interface{}
+		//var iUserNum interface{}
+		var iRoomNum interface{}
+		if iRoomType, ok = mapItem["RoomType"]; ok == false {
+			//error ...
+			continue
+		}
+		/*if iUserNum, ok = mapItem["UserNum"]; ok == false {
+			//error ...
+			continue
+		}*/
+		if iRoomNum, ok = mapItem["RoomNum"]; ok == false {
+			//error ...
+			continue
+		}
+		//依据这几个数值进行区间换算
+		//组装列表
+		roomType := int32(iRoomType.(float64))
+		//userNum := int32(iUserNum.(float64))
+		roomNum := int32(iRoomNum.(float64))
+		rs.room[roomType] = make(map[string]*common.Room, roomNum)
+	}
+
 }
 
 // 来自GateService转发消息
@@ -198,9 +250,9 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 
 func (rs *RoomService) FmtRoom(timer *timer.Ticker) {
 	log.Release("打印房间---------")
-	for k, v := range rs.room {
+	/*for k, v := range rs.room {
 		log.Release("room 房间号--%s,用户数--%d,owner--%d", k, v.GetRoomClientNum(), v.GetOwner().GetUserId())
-	}
+	}*/
 }
 
 func (rs *RoomService) CheckOnline(clientId uint64) bool {
@@ -241,20 +293,45 @@ func (rs *RoomService) CheckOnline(clientId uint64) bool {
 	return newRoom
 }*/
 
-func (rs *RoomService) GetRoom(roomUuid string) (*common.Room, bool) {
-	room, ok := rs.room[roomUuid]
-	return room, ok
+func (rs *RoomService) GetRoom(roomUuid string, roomType int32) (*common.Room, bool) {
+
+	if roomType == 0 {
+		//代表没传那就全局检索
+		for _, roomMap := range rs.room {
+			room, ok := roomMap[roomUuid]
+			if ok {
+				return room, ok
+			}
+		}
+	} else {
+		roomMap, ok := rs.room[roomType]
+		if !ok {
+			return nil, ok
+		}
+		room, ok := roomMap[roomUuid]
+		return room, ok
+	}
+	return nil, false
 }
 
 func (rs *RoomService) RPC_GetPbRoom(req *rpc.GetRoomReq, res *rpc.GetRoomRes) error {
 	roomUuid := req.GetRoomUuid()
-	room := rs.room[roomUuid]
+	roomType := req.GetRoomType()
+	roomMap, ok := rs.room[roomType]
+	if !ok {
+		return nil
+	}
+	room := roomMap[roomUuid]
 	res.Room = rs.PackRpcRoom(room)
 	return nil
 }
 
-func (rs *RoomService) SetRoom(roomUuid string, room *common.Room) {
-	rs.room[roomUuid] = room
+func (rs *RoomService) SetRoom(roomUuid string, roomType int32, room *common.Room) {
+	roomMap, ok := rs.room[roomType]
+	if !ok {
+		return
+	}
+	roomMap[roomUuid] = room
 }
 
 func (rs *RoomService) GetProxy() *common.GateProxyModule {
@@ -326,9 +403,13 @@ func (rs *RoomService) PackRpcRoom(room *common.Room) *rpc.Room {
 	}
 }*/
 
-func (rs *RoomService) RemoveRoom(roomUuid string) {
+func (rs *RoomService) RemoveRoom(roomUuid string, roomType int32) {
 	log.Release("移除房间--%d", roomUuid)
-	delete(rs.room, roomUuid)
+	roomMap, ok := rs.room[roomType]
+	if !ok {
+		return
+	}
+	delete(roomMap, roomUuid)
 }
 
 func (rs *RoomService) RadioPlayerInfo(room *common.Room) {
@@ -348,6 +429,30 @@ func (rs *RoomService) RadioPlayerInfo(room *common.Room) {
 func (rs *RoomService) NewRoom() *common.Room {
 	room := roomPool.Get().(*common.Room)
 	return room
+}
+
+func (rs *RoomService) SimpleRoomList(roomType int32) []*msg.SimpleRoom {
+	simpleRooms := make([]*msg.SimpleRoom, 0)
+	if roomType == 0 {
+		//全局的返回数据
+		for _, roomMap := range rs.room {
+			for _, room := range roomMap {
+				simpleRooms = append(simpleRooms, rs.NewSimpleRoom(room))
+			}
+		}
+	} else {
+		roomMap, ok := rs.room[roomType]
+		if ok {
+			for _, room := range roomMap {
+				simpleRooms = append(simpleRooms, rs.NewSimpleRoom(room))
+			}
+		}
+	}
+	return simpleRooms
+}
+
+func (rs *RoomService) NewSimpleRoom(room *common.Room) *msg.SimpleRoom {
+	return &msg.SimpleRoom{RoomType: room.GetRoomType(), RoomName: room.GetRoomName(), Uuid: room.GetUUid(), RoomClientNum: room.GetRoomClientNum(), AvgRank: room.GetAvgRank()}
 }
 
 func (rs *RoomService) NewPlayerInfo(playerInfoPb *msg.PlayerInfo) *entity.PlayerInfo {

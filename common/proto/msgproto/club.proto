@@ -1,0 +1,44 @@
+syntax = "proto3";
+import "proto/msgproto/errcode.proto";
+package msg;
+option go_package = ".;msg";
+
+message MsgCreateClubReq{
+  uint64 UserId = 1;
+  string ClubName = 2;
+}
+
+message MsgCreateClubRes{
+  ErrCode Ret = 1; //0 成功
+  ClubInfo club = 2;
+}
+
+message MsgAddClubReq{
+  uint64 UserId = 1;
+  string ClubNum = 2; //俱乐部号
+}
+
+message MsgAddClubRes{
+  repeated ClubGeneral club = 2;
+}
+//简述版的俱乐部
+message ClubGeneral{
+  string ClubNum = 1; // 俱乐部ID
+  string ClubHeadImageUrl = 2;//俱乐部头像
+  int32 OnlineUserNum = 3;//在线人数
+  int32 GameNum = 4;//牌局个数
+  string ClubName = 5; //俱乐部名字
+}
+
+message ClubInfo{
+  uint64 ClubId = 1;
+  string headImageUrl = 2;
+  string ClubNum =3;
+}
+
+
+
+
+
+
+

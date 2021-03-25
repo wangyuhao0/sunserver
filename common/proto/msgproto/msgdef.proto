@@ -35,7 +35,8 @@ enum MsgType
   QuitRoomReq = 10005;
   QuitRoomRes = 10006;
   RadioOtherAddRoomRes = 10007;
-
+  RoomListReq = 10008;
+  RoomListRes = 10009;
 
   //TableService 30001 - 40000
   AddTableReq = 30001;

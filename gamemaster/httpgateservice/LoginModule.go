@@ -41,6 +41,7 @@ func (login *LoginModule) OnRelease() {
 type HttpRespone struct {
 	ECode         int
 	UserId        uint64
+	Info          *collect.User
 	GateServerUrl []GateInfoResp
 	Token         string
 }
@@ -134,6 +135,7 @@ func (login *LoginModule) choseServer(session *httpservice.HttpSession, user *co
 		resp.Token = res.Token
 		resp.UserId = user.Id
 		resp.GateServerUrl = login.funcGetGateUrl()
+		resp.Info = user
 		session.WriteJsonDone(http.StatusOK, &resp)
 		//存入 redis 数据缓存
 		//异步存储
@@ -180,7 +182,7 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 			//代表不存在 初始化
 			log.Release("初始化用户------")
 			var mysqlData db.MysqlControllerReq
-			sql := "insert `user`(nick_name,account,`password`,create_time,last_login_time,is_login) values(?,?,?,?,)"
+			sql := "insert `user`(nick_name,account,`password`,create_time,last_login_time,is_login) values(?,?,?,?,?,?)"
 			args := []string{account, account, passWord, strconv.FormatInt(timer.Now().Unix(), 10), strconv.FormatInt(timer.Now().Unix(), 10), "1"}
 			db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), sql, args, db.OptType_Insert, &mysqlData)
 			err := login.GetService().GetRpcHandler().AsyncCall("MysqlService.RPC_MysqlDBRequest", &mysqlData, func(ret *db.MysqlControllerRet, err error) {
