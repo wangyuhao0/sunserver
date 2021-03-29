@@ -1,0 +1,1 @@
+./go_build_main_go.exe -config ./config/dev -start nodeid=1
