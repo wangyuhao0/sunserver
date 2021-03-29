@@ -187,8 +187,10 @@ func (mysqlService *MysqlService) DoUpdate(dbReq MysqlDBRequest) {
 		log.Error("%s DoUpdate fail error %s", dbReq.request.TableName, err.Error())
 	}
 
-	if dbReq.responder.IsInvalid() == false {
-		mysqlService.responseRet(dbReq, err, int32(exec.RowsAffected))
+	if request.GetCallBack() {
+		if dbReq.responder.IsInvalid() == false {
+			mysqlService.responseRet(dbReq, err, int32(exec.RowsAffected))
+		}
 	}
 }
 

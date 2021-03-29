@@ -73,6 +73,7 @@ func MakeMysql(tableName string, key uint64, sql string, args []string, optType 
 	req.Sql = sql
 	req.Args = args
 	req.Type = optType
+	req.CallBack = false
 }
 
 //var req db.RedisControllerReq

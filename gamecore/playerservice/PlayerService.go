@@ -116,7 +116,6 @@ func (ps *PlayerService) NewPlayer(id uint64) *player.Player {
 	player := playerPool.Get().(*player.Player)
 	player.Clear()
 	player.Id = id
-
 	return player
 }
 
@@ -284,6 +283,7 @@ func (ps *PlayerService) RPCOnClose(byteBuffer []byte) {
 	v.SetOnline(false)
 	//发送给数据库
 	var mysqlData db.MysqlControllerReq
+
 	sql := "update `user` set last_login_time = ?,is_login=? where id = ?"
 	args := []string{strconv.FormatInt(timer.Now().Unix(), 10), "0", strconv.FormatUint(v.Id, 10)}
 	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(v.PlatId)), sql, args, db.OptType_Update, &mysqlData)
@@ -437,15 +437,16 @@ func (ps *PlayerService) RPC_Login(req *rpc.LoginToPlayerServiceReq, res *rpc.Lo
 		ps.ResetConn(req.ClientId, req.UserId, int(req.NodeId), p)
 		//重登陆
 		p.ReLogin(req.ClientId, req.UserId, int(req.NodeId))
+
 	}
 
 	return nil
 }
 
 func (ps *PlayerService) ResetConn(cliId uint64, userId uint64, fromGateId int, p *player.Player) {
+	p.SetOnline(true)
 	ps.mapPlayer[userId] = p
 	ps.mapClientPlayer[cliId] = p
-	p.SetOnline(true)
 	// 往队列服发送信息 重新连接登录的
 	//ps.UpdateBalanceQueue(cliId,1)
 	var mysqlData db.MysqlControllerReq

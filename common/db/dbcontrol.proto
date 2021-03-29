@@ -40,6 +40,7 @@ message MysqlControllerReq{
     string resultJson = 4;
     string sql = 5;
     repeated string args = 6;
+    bool callBack = 7;
 }
 
 message MysqlControllerRet {
