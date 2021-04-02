@@ -314,6 +314,8 @@ type MysqlDBRequest struct {
 
 func (mysqlService *MysqlService) RPC_MysqlDBRequest(responder rpc.Responder, request *db.MysqlControllerReq) error {
 	log.Release("进入到了MysqlService-RPC_DBRequest")
+	sql := request.GetSql()
+	log.Release("sql %s", sql)
 	index := request.GetKey() % uint64(mysqlService.goroutineNum)
 	if len(mysqlService.channelOptData[index]) == cap(mysqlService.channelOptData[index]) {
 		log.Error("channel is full %d", index)

@@ -57,9 +57,9 @@
       "WriteDeadline": 1500
     },
     "MysqlService": {
-      "Url": "127.0.0.1:3306",
+      "Url": "39.106.196.69:3306",
       "UserName":"root",
-      "PassWord":"123456",
+      "PassWord":"Wyh-970912",
       "DBName": "origin",
       "GoroutineNum": 2,
       "MaxConn": 100,

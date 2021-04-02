@@ -19,6 +19,7 @@ enum ErrCode
     NotOwner = 11; //不是房主
     TableIsEnough = 12; //房间满了
     HaveClientRefuse = 13; //有用户拒绝了
+    AlreadyCreateRoom = 14; //已经创建房间了
 
 
 }

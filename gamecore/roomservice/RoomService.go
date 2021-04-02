@@ -15,6 +15,7 @@ import (
 	"sunserver/gamecore/common"
 	"sunserver/gamecore/roomservice/cycledo"
 	"sunserver/gamecore/roomservice/msghandler"
+	"sunserver/gamecore/roomservice/room"
 	"sync"
 	"time"
 )
@@ -85,8 +86,10 @@ type RoomService struct {
 	// k 为 roomUuid
 
 	//第一个k为房间类型 第二个key 房间号 做房间类型区分
-	room map[int32]map[string]*common.Room //
+	room map[int32]map[string]*room.Room //
 	//room map[string]*common.Room //在线房间数 还有房主信息
+
+	roomStatus map[uint64]string //来判断用户是否创建了房间
 
 	cycleDo *cycledo.RoomInterface
 
@@ -95,11 +98,11 @@ type RoomService struct {
 
 func (rs *RoomService) OnInit() error {
 	//1.初始化变量与模块
-	rs.room = make(map[int32]map[string]*common.Room)
-
+	rs.room = make(map[int32]map[string]*room.Room)
+	rs.roomStatus = make(map[uint64]string)
 	rs.mapRegisterMsg = make(map[msg.MsgType]*RegMsgInfo, 512)
 	roomPool = sync.Pool{New: func() interface{} {
-		return &common.Room{}
+		return &room.Room{}
 	}}
 	playerInfoPool = sync.Pool{New: func() interface{} {
 		return &entity.PlayerInfo{}
@@ -133,12 +136,12 @@ func (rs *RoomService) OnLoadCfg() {
 	cfg := rs.GetServiceCfg()
 	configMap, ok := cfg.(map[string]interface{})
 
-	room, ok := configMap["Room"]
+	room1, ok := configMap["Room"]
 	if ok == false {
 		return
 	}
 
-	roomList, ok := room.([]interface{})
+	roomList, ok := room1.([]interface{})
 	if ok == false {
 		//error...
 		return
@@ -166,9 +169,23 @@ func (rs *RoomService) OnLoadCfg() {
 		roomType := int32(iRoomType.(float64))
 		//userNum := int32(iUserNum.(float64))
 		roomNum := int32(iRoomNum.(float64))
-		rs.room[roomType] = make(map[string]*common.Room, roomNum)
+		rs.room[roomType] = make(map[string]*room.Room, roomNum)
 	}
 
+}
+
+//校验是否可以创建房间 移除房间
+func (rs *RoomService) CheckCreateRoom(userId uint64) bool {
+	_, ok := rs.roomStatus[userId]
+	return ok
+}
+
+func (rs *RoomService) AddRoomStatus(userId uint64, roomUuid string) {
+	rs.roomStatus[userId] = roomUuid
+}
+
+func (rs *RoomService) RemoveRoomStatus(userId uint64) {
+	delete(rs.roomStatus, userId)
 }
 
 // 来自GateService转发消息
@@ -293,7 +310,7 @@ func (rs *RoomService) CheckOnline(clientId uint64) bool {
 	return newRoom
 }*/
 
-func (rs *RoomService) GetRoom(roomUuid string, roomType int32) (*common.Room, bool) {
+func (rs *RoomService) GetRoom(roomUuid string, roomType int32) (*room.Room, bool) {
 
 	if roomType == 0 {
 		//代表没传那就全局检索
@@ -326,7 +343,7 @@ func (rs *RoomService) RPC_GetPbRoom(req *rpc.GetRoomReq, res *rpc.GetRoomRes) e
 	return nil
 }
 
-func (rs *RoomService) SetRoom(roomUuid string, roomType int32, room *common.Room) {
+func (rs *RoomService) SetRoom(roomUuid string, roomType int32, room *room.Room) {
 	roomMap, ok := rs.room[roomType]
 	if !ok {
 		return
@@ -375,7 +392,7 @@ func (rs *RoomService) PackRpcPlayerInfo(info *entity.PlayerInfo) *rpc.PlayerInf
 	return &rpc.PlayerInfo{UserId: info.GetUserId(), Rank: info.GetRank(), NickName: info.GetNickName(), Sex: info.GetSex(), Avatar: info.GetAvatar(), ClientId: info.GetClientId(), IsOwner: info.IsOwner(), SeatNum: info.GetSeatNum()}
 }
 
-func (rs *RoomService) PackRoom(room *common.Room) *msg.Room {
+func (rs *RoomService) PackRoom(room *room.Room) *msg.Room {
 	owner := rs.PackPlayerInfo(room.GetOwner())
 	otherClients := room.GetOtherClients()
 	playerInfos := make([]*msg.PlayerInfo, 0)
@@ -385,7 +402,7 @@ func (rs *RoomService) PackRoom(room *common.Room) *msg.Room {
 	return &msg.Room{Uuid: room.GetUUid(), RoomName: room.GetRoomName(), RoomType: room.GetRoomType(), AvgRank: room.GetAvgRank(), RoomClientNum: room.GetRoomClientNum(), Owner: owner, OtherClients: playerInfos}
 }
 
-func (rs *RoomService) PackRpcRoom(room *common.Room) *rpc.Room {
+func (rs *RoomService) PackRpcRoom(room *room.Room) *rpc.Room {
 	owner := rs.PackRpcPlayerInfo(room.GetOwner())
 	otherClients := room.GetOtherClients()
 	playerInfos := make([]*rpc.PlayerInfo, 0)
@@ -409,10 +426,23 @@ func (rs *RoomService) RemoveRoom(roomUuid string, roomType int32) {
 	if !ok {
 		return
 	}
+	r, ok := roomMap[roomUuid]
+	if ok {
+		owner := r.GetOwner()
+		if owner != nil {
+			rs.RemoveRoomStatus(owner.GetUserId())
+		}
+		clients := r.GetOtherClients()
+		if len(clients) > 0 {
+			for _, i2 := range clients {
+				rs.RemoveRoomStatus(i2.GetUserId())
+			}
+		}
+	}
 	delete(roomMap, roomUuid)
 }
 
-func (rs *RoomService) RadioPlayerInfo(room *common.Room) {
+func (rs *RoomService) RadioPlayerInfo(room *room.Room) {
 	playerInfos := make([]*entity.PlayerInfo, 0)
 	resPlayers := make([]*msg.PlayerInfo, 0)
 	playerInfos = append(playerInfos, room.GetOwner())
@@ -426,8 +456,8 @@ func (rs *RoomService) RadioPlayerInfo(room *common.Room) {
 	}
 }
 
-func (rs *RoomService) NewRoom() *common.Room {
-	room := roomPool.Get().(*common.Room)
+func (rs *RoomService) NewRoom() *room.Room {
+	room := roomPool.Get().(*room.Room)
 	return room
 }
 
@@ -451,7 +481,7 @@ func (rs *RoomService) SimpleRoomList(roomType int32) []*msg.SimpleRoom {
 	return simpleRooms
 }
 
-func (rs *RoomService) NewSimpleRoom(room *common.Room) *msg.SimpleRoom {
+func (rs *RoomService) NewSimpleRoom(room *room.Room) *msg.SimpleRoom {
 	return &msg.SimpleRoom{RoomType: room.GetRoomType(), RoomName: room.GetRoomName(), Uuid: room.GetUUid(), RoomClientNum: room.GetRoomClientNum(), AvgRank: room.GetAvgRank()}
 }
 
@@ -465,4 +495,36 @@ func (rs *RoomService) NewPlayerInfo(playerInfoPb *msg.PlayerInfo) *entity.Playe
 	playerInfo.SetSex(playerInfo.GetSex())
 	playerInfo.SetUserId(playerInfoPb.GetUserId())
 	return playerInfo
+}
+
+func (rs *RoomService) TimerAfter(roomType int32, uuid string, d time.Duration, cb func(ticker *timer.Timer)) *timer.Timer {
+	return rs.AfterFunc(d, func(ticker *timer.Timer) {
+		m, ok := rs.room[roomType]
+		if ok {
+			_, ok := m[uuid]
+			if ok {
+				cb(ticker)
+			}
+		}
+	})
+}
+
+func (rs *RoomService) TimerTicker(roomType int32, uuid string, d time.Duration, cb func(ticker *timer.Ticker)) *timer.Ticker {
+	ticker := rs.NewTicker(d, func(ticker *timer.Ticker) {
+		m, ok := rs.room[roomType]
+		if ok == true {
+			_, ok := m[uuid]
+			if ok {
+				cb(ticker)
+			} else {
+				ticker.Cancel()
+			}
+		}
+	})
+
+	return ticker
+}
+
+func (rs *RoomService) CloseRoom(uuid string, roomType int32) {
+	rs.RemoveRoom(uuid, roomType)
 }

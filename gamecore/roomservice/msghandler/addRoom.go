@@ -15,6 +15,15 @@ func handlerClientAddRoom(ri *cycledo.RoomInterface, clientId uint64, message pr
 	roomType := msgReq.GetRoomType()
 	info := msgReq.GetPlayerInfo()
 	//登录平台了 然后创建房间放入
+	userId := info.GetUserId()
+	ok := ri.CheckCreateRoom(userId)
+	if !ok {
+		//创不了
+		log.Release("创建过房间,无法加入 userId-%d", userId)
+		ri.SendMsgRi(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_AlreadyCreateRoom})
+		return
+	}
+
 	room, ok := ri.GetRoomRi(roomUuid, roomType)
 	if !ok {
 		log.Release("房间不存在%s", room)
@@ -49,7 +58,8 @@ func handlerClientAddRoom(ri *cycledo.RoomInterface, clientId uint64, message pr
 	//发送加入成功
 	//packRoomRi := ri.PackRoomRi(room)
 	ri.SendMsgRi(clientId, msg.MsgType_AddRoomRes, &msg.MsgAddRoomRes{Ret: msg.ErrCode_OK})
-	//先开辟一个空间 把用户全部放进去 包括房主
+	//设置已经加入
+	ri.AddRoomStatus(userId, roomUuid)
 	ri.RadioPlayerInfoRi(room)
 
 }

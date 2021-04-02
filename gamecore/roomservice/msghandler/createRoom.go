@@ -17,6 +17,16 @@ func handlerClientCreateRoom(ri *cycledo.RoomInterface, clientId uint64, message
 	userId := playerInfoPb.GetUserId()
 	//rClientId := msgReq.GetClientId()
 	//登录平台了 然后创建房间放入
+
+	ok := ri.CheckCreateRoom(userId)
+
+	if !ok {
+		//创不了
+		log.Release("创建过房间%d", userId)
+		ri.SendMsgRi(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_AlreadyCreateRoom})
+		return
+	}
+
 	newRoom := ri.NewRoomRi()
 	playerInfo := ri.NewPlayerInfoRi(playerInfoPb)
 	//设置为房主
@@ -27,8 +37,10 @@ func handlerClientCreateRoom(ri *cycledo.RoomInterface, clientId uint64, message
 	playerInfo.SetClientId(clientId)
 
 	uuid := uuid.Rand().HexEx()
-	newRoom.OnInit(ri.GetProxyRi(), uuid, "testRoom"+strconv.FormatUint(userId, 10), 1, playerInfo, roomType)
+	newRoom.OnInit(ri.GetProxyRi(), ri.RS, uuid, "testRoom"+strconv.FormatUint(userId, 10), 1, playerInfo, roomType)
 	ri.SetRoomRi(uuid, roomType, newRoom)
+	//增加房间
+	ri.AddRoomStatus(userId, uuid)
 	//通知客户端
 	newRoom.SendToClient(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_OK, RoomUuid: uuid})
 

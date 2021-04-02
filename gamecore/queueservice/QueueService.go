@@ -16,6 +16,7 @@ import (
 	"sunserver/gamecore/queueservice/cycledo"
 	"sunserver/gamecore/queueservice/def"
 	"sunserver/gamecore/queueservice/msghandler"
+	"sunserver/gamecore/roomservice/room"
 	"sync"
 	"time"
 )
@@ -87,7 +88,7 @@ type QueueService struct {
 	//依据房间类型
 	mapRoomOnQueue map[int32]*QueueTypeList // 在线排队 roomType->[ {a-b:[实际的人]}  ]
 
-	mapRoom map[string]*common.Room //存放房间的 判断房间是否存在
+	mapRoom map[string]*room.Room //存放房间的 判断房间是否存在
 
 	maxPlayerNum uint64 //每个队列排队最大人数
 
@@ -137,11 +138,11 @@ const UINT_MAX = ^uint64(0)
 func (qs *QueueService) OnInit() error {
 	//1.初始化变量与模块
 	qs.mapRoomOnQueue = make(map[int32]*QueueTypeList, 4096)
-	qs.mapRoom = make(map[string]*common.Room, 4096)
+	qs.mapRoom = make(map[string]*room.Room, 4096)
 	qs.mapRegisterMsg = make(map[msg.MsgType]*RegMsgInfo, 512)
 	//qs.mapClientOnline = make(map[int32]*ClientPlayer, 20)
 	roomPool = sync.Pool{New: func() interface{} {
-		return &common.Room{}
+		return &room.Room{}
 	}}
 
 	playerInfoPool = sync.Pool{New: func() interface{} {
@@ -325,8 +326,8 @@ func (qs *QueueService) CheckClientIdOnLine(clientId uint64) bool {
 	}
 	return flag
 }*/
-func (qs *QueueService) NewRoom() *common.Room {
-	room := roomPool.Get().(*common.Room)
+func (qs *QueueService) NewRoom() *room.Room {
+	room := roomPool.Get().(*room.Room)
 	return room
 }
 
@@ -359,7 +360,7 @@ func (qs *QueueService) PackPlayerInfo(pbData *rpc.PlayerInfo) *entity.PlayerInf
 	return playerInfo
 }
 
-func (qs *QueueService) PackRoom(res *rpc.GetRoomRes) *common.Room {
+func (qs *QueueService) PackRoom(res *rpc.GetRoomRes) *room.Room {
 	room := qs.NewRoom()
 	pbRoom := res.GetRoom()
 	pbOwner := pbRoom.GetOwner()
@@ -374,7 +375,7 @@ func (qs *QueueService) PackRoom(res *rpc.GetRoomRes) *common.Room {
 	return room
 }
 
-func (qs *QueueService) AddQueue(room *common.Room) bool {
+func (qs *QueueService) AddQueue(room *room.Room) bool {
 	log.Release("加入队列---%d", room.GetUUid())
 	rank := room.GetAvgRank()
 	roomType := room.GetRoomType()
@@ -396,11 +397,11 @@ func (qs *QueueService) AddQueue(room *common.Room) bool {
 	return flag
 }
 
-func (qs *QueueService) AddRoom(room *common.Room) {
+func (qs *QueueService) AddRoom(room *room.Room) {
 	qs.mapRoom[room.GetUUid()] = room
 }
 
-func (qs *QueueService) GetRoom(roomUuid string) *common.Room {
+func (qs *QueueService) GetRoom(roomUuid string) *room.Room {
 	return qs.mapRoom[roomUuid]
 }
 
@@ -408,7 +409,7 @@ func (qs *QueueService) RemoveRoom(roomUuid string) {
 	delete(qs.mapRoom, roomUuid)
 }
 
-func (qs *QueueService) QuitQueue(room *common.Room) {
+func (qs *QueueService) QuitQueue(room *room.Room) {
 	log.Release("移除队列---%d", room.GetUUid())
 	rank := room.GetAvgRank()
 	roomType := room.GetRoomType()

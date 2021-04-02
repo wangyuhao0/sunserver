@@ -12,8 +12,8 @@ import (
 	"sunserver/common/proto/msg"
 	"sunserver/common/proto/rpc"
 	"sunserver/common/util"
-	"sunserver/gamecore/common"
 	"sunserver/gamecore/queueservice/def"
+	"sunserver/gamecore/roomservice/room"
 )
 
 type MatchModule struct {
@@ -35,7 +35,7 @@ func (match *MatchModule) Match(mapList *def.MapList, need int32) {
 	clientNums := make([]int, 0)
 	tableServiceNodeId := util.GetNodeIdByService("TableService")
 	for elem := list.Front(); elem != nil; elem = elem.Next() {
-		room1 := elem.Value.(*common.Room)
+		room1 := elem.Value.(*room.Room)
 		//拿到人数
 		num := room1.GetRoomClientNum()
 		clientNums = append(clientNums, int(num))
@@ -49,13 +49,13 @@ func (match *MatchModule) Match(mapList *def.MapList, need int32) {
 		trace := backTrace(0, sum, int(need), clientNums, x, len(clientNums), result)
 		if trace != nil {
 			//说明存在  先从list里面剔除掉 放入到排队队列
-			clientList := make([]uint64,0)
-			roomUuidList := make([]string,0)
+			clientList := make([]uint64, 0)
+			roomUuidList := make([]string, 0)
 			var roomType int32
 			for i := 0; i < len(trace); i++ {
 				//往匹配队列里面加
 				room := mapList.GetRoomByIndex(i)
-				if room==nil {
+				if room == nil {
 					log.Release("匹配出现异常-----")
 					break
 				}
@@ -64,7 +64,7 @@ func (match *MatchModule) Match(mapList *def.MapList, need int32) {
 				for _, other := range room.GetOtherClients() {
 					clientList = append(clientList, other.GetClientId())
 				}
-				roomUuidList = append(roomUuidList,room.GetUUid())
+				roomUuidList = append(roomUuidList, room.GetUUid())
 			}
 			//通知匹配成功
 			//生成一个预支id -- 用户确认后由客户端传回 然后 服务端组成一个局
@@ -75,7 +75,7 @@ func (match *MatchModule) Match(mapList *def.MapList, need int32) {
 			}
 			//移除room在匹配队列
 			for _, v := range roomUuidList {
-				log.Release("匹配成功移除房间-%s",v)
+				log.Release("匹配成功移除房间-%s", v)
 				mapList.Remove(v)
 			}
 

@@ -3,8 +3,9 @@ package def
 import (
 	"container/list"
 	"fmt"
-	"sunserver/gamecore/common"
+	"sunserver/gamecore/roomservice/room"
 )
+
 // 为了 队列使用 满足查找以及删除
 //用锁 防止并发
 
@@ -18,7 +19,7 @@ type MapList struct {
 	dataList *list.List
 }
 
-func (mapList *MapList)GetDataList()  *list.List{
+func (mapList *MapList) GetDataList() *list.List {
 	return mapList.dataList
 }
 
@@ -29,13 +30,12 @@ func NewMapList() *MapList {
 	}
 }
 
-
 func (mapList *MapList) Exists(roomUuid string) bool {
 	_, exists := mapList.dataMap[roomUuid]
 	return exists
 }
 
-func (mapList *MapList) Push(roomUuid string,room *common.Room) bool {
+func (mapList *MapList) Push(roomUuid string, room *room.Room) bool {
 	if mapList.Exists(roomUuid) {
 		return false
 	}
@@ -62,11 +62,11 @@ func (mapList *MapList) Walk() {
 	}
 }
 
-func (mapList *MapList) GetRoomByIndex(index int) *common.Room{
-	i:=0
+func (mapList *MapList) GetRoomByIndex(index int) *room.Room {
+	i := 0
 	for elem := mapList.dataList.Front(); elem != nil; elem = elem.Next() {
-		if i==index {
-			return elem.Value.(*common.Room)
+		if i == index {
+			return elem.Value.(*room.Room)
 		}
 		i++
 	}
@@ -74,18 +74,17 @@ func (mapList *MapList) GetRoomByIndex(index int) *common.Room{
 }
 
 type Elements struct {
-	key string
-	value *common.Room
+	key   string
+	value *room.Room
 }
 
 func (e Elements) GetKey() string {
 	return e.key
 }
 
-func (e Elements) GetValue() *common.Room {
+func (e Elements) GetValue() *room.Room {
 	return e.value
 }
-
 
 /*type MapList struct {
 	DataMap  sync.Map
@@ -101,9 +100,6 @@ func NewMapList() *MapList {
 		DataList: make([]*common.Room,0),
 	}
 }*/
-
-
-
 
 /*func (mapList *MapList) Exists(roomUuid string) bool {
 	_, exists := mapList.DataMap.Load(roomUuid)

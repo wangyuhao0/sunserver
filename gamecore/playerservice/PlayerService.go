@@ -120,6 +120,7 @@ func (ps *PlayerService) NewPlayer(id uint64) *player.Player {
 }
 
 func (ps *PlayerService) ReleasePlayer(player *player.Player) {
+	log.Release("ReleasePlayer")
 	var playerStatus rpc.UpdatePlayerStatus
 	playerStatus.UserId = player.GetUserId()
 	playerStatus.Status = rpc.LoginStatus_LoginOut
@@ -239,6 +240,7 @@ func (ps *PlayerService) OnRegisterEvent() {
 
 // 主动关闭连接
 func (ps *PlayerService) CloseClient(clientId uint64) {
+	log.Release("CloseClient")
 	if clientId == 0 {
 		log.Error("clientId is error.")
 		return
@@ -260,10 +262,8 @@ func (ps *PlayerService) CloseClient(clientId uint64) {
 	inputArgs.SetUint64(clientId)
 	ps.RawGoNode(originrpc.RpcProcessorGoGoPB, nodeId, global.RawRpcCloseClient, global.GateService, &inputArgs)
 	//通知房间如果有就下线
-	//var inputArgss global.RawInputArgs
-	//inputArgss.SetUint64(clientId)
-	//ps.RawGoNode(originrpc.RpcProcessorGoGoPB, nodeId, global.RawRpcCloseClient, global.GateService, &inputArgss)
 	delete(ps.mapClientPlayer, clientId)
+
 }
 
 // 收到来自GateService通知下线
@@ -369,6 +369,7 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 	player, ok := playerService.mapClientPlayer[clientId]
 	if ok == false {
 		log.Warning("close client %d,mapClientPlayer not exists clientId", clientId)
+		log.Release("RpcOnRecvCallBack CB 1")
 		playerService.CloseClient(clientId)
 		return
 	}
@@ -382,6 +383,7 @@ func (cb *RpcOnRecvCallBack) CB(data interface{}) {
 
 	msgInfo, ok := playerService.mapRegisterMsg[msgType]
 	if ok == false {
+		log.Release("RpcOnRecvCallBack CB 2")
 		playerService.CloseClient(clientId)
 		log.Warning("close client %d,message type %d is not  register.", player.GetClientId(), msgType)
 		return
@@ -415,6 +417,7 @@ func (ps *PlayerService) RPC_Login(req *rpc.LoginToPlayerServiceReq, res *rpc.Lo
 	playerStatus.Status = rpc.LoginStatus_Logined
 	playerStatus.NodeId = int32(node.GetNodeId())
 	//往中心服发送 同步用户
+	log.Release("发往CenterService.RPC_UpdateStatus")
 	err := ps.GoNode(masterNodeId, "CenterService.RPC_UpdateStatus", &playerStatus)
 	if err != nil {
 		res.Ret = 2
@@ -439,22 +442,21 @@ func (ps *PlayerService) RPC_Login(req *rpc.LoginToPlayerServiceReq, res *rpc.Lo
 		p.ReLogin(req.ClientId, req.UserId, int(req.NodeId))
 
 	}
-
+	log.Release("出来了++++++++++")
 	return nil
 }
 
 func (ps *PlayerService) ResetConn(cliId uint64, userId uint64, fromGateId int, p *player.Player) {
+	log.Release("ResetConn %d", cliId)
 	p.SetOnline(true)
 	ps.mapPlayer[userId] = p
 	ps.mapClientPlayer[cliId] = p
-	// 往队列服发送信息 重新连接登录的
-	//ps.UpdateBalanceQueue(cliId,1)
-	var mysqlData db.MysqlControllerReq
+	/*var mysqlData db.MysqlControllerReq
 	mysqlData.TableName = constpackage.UserTableName
 	sql := "update `user` set last_login_time = ?,is_login=? where id = ?"
 	args := []string{strconv.FormatInt(timer.Now().Unix(), 10), "1", strconv.FormatUint(userId, 10)}
 	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(p.PlatId)), sql, args, db.OptType_Update, &mysqlData)
-	ps.SendMsgToMysql(&mysqlData)
+	ps.SendMsgToMysql(&mysqlData)*/
 }
 
 func (ps *PlayerService) TimerAfter(userId uint64, d time.Duration, cb func(ticker *timer.Timer)) *timer.Timer {
