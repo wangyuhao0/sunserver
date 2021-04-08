@@ -39,7 +39,7 @@ type roomService interface {
 
 	SendMsg(clientId uint64, msgType msg.MsgType, msg proto.Message)
 
-	RadioPlayerInfo(room *room.Room)
+	RadioPlayerInfo(clientId uint64, room *room.Room)
 
 	RemoveRoom(roomUuid string, roomType int32)
 
@@ -91,8 +91,8 @@ func (ri *RoomInterface) PackRoomRi(room *room.Room) *msg.Room {
 	return ri.RS.PackRoom(room)
 }
 
-func (ri *RoomInterface) RadioPlayerInfoRi(room *room.Room) {
-	ri.RS.RadioPlayerInfo(room)
+func (ri *RoomInterface) RadioPlayerInfoRi(clientId uint64, room *room.Room) {
+	ri.RS.RadioPlayerInfo(clientId, room)
 }
 
 func (ri *RoomInterface) RemoveRoomRi(roomUuid string, roomType int32) {

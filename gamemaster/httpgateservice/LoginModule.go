@@ -165,7 +165,7 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 	account := loginInfo.Account
 	passWord := loginInfo.PassWord
 	var mysqlData db.MysqlControllerReq
-	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), constpackage.LoginSql, []string{account, passWord}, db.OptType_Find, &mysqlData)
+	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), constpackage.LoginSql, []string{account, passWord}, db.OptType_Find, true, &mysqlData)
 	err := login.GetService().GetRpcHandler().AsyncCall("MysqlService.RPC_MysqlDBRequest", &mysqlData, func(ret *db.MysqlControllerRet, err error) {
 		//返回账号创建结果
 		var user collect.User
@@ -184,7 +184,7 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 			var mysqlData db.MysqlControllerReq
 			sql := "insert `user`(nick_name,account,`password`,create_time,last_login_time,is_login) values(?,?,?,?,?,?)"
 			args := []string{account, account, passWord, strconv.FormatInt(timer.Now().Unix(), 10), strconv.FormatInt(timer.Now().Unix(), 10), "1"}
-			db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), sql, args, db.OptType_Insert, &mysqlData)
+			db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), sql, args, db.OptType_Insert, true, &mysqlData)
 			err := login.GetService().GetRpcHandler().AsyncCall("MysqlService.RPC_MysqlDBRequest", &mysqlData, func(ret *db.MysqlControllerRet, err error) {
 				//返回账号创建结果
 				if err != nil {
@@ -202,6 +202,8 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 					log.Error("Unmarshal fail %s,platid:%s!", err.Error(), platId)
 					return
 				}
+				//向centerService登陆
+				login.choseServer(session, &user, loginInfo)
 			})
 			if err != nil {
 				login.WriteResponseError(session, msg.ErrCode_InterNalError)
@@ -224,7 +226,7 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 			var mysqlData db.MysqlControllerReq
 			sql := "update `user` set last_login_time = ?,is_login=? where id = ?"
 			args := []string{strconv.FormatInt(timer.Now().Unix(), 10), "1", strconv.FormatUint(user.Id, 10)}
-			db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), sql, args, db.OptType_Update, &mysqlData)
+			db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(loginInfo.PlatId)), sql, args, db.OptType_Update, true, &mysqlData)
 			err := login.GetService().GetRpcHandler().AsyncCall("MysqlService.RPC_MysqlDBRequest", &mysqlData, func(ret *db.MysqlControllerRet, err error) {
 				//返回账号创建结果
 				if err != nil {
@@ -241,6 +243,8 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 					log.Error("update user fail %s,platid:%s!", err.Error(), platId)
 					return
 				}
+				//向centerService登陆
+				login.choseServer(session, &user, loginInfo)
 			})
 			if err != nil {
 				login.WriteResponseError(session, msg.ErrCode_InterNalError)
@@ -248,8 +252,6 @@ func (login *LoginModule) loginToDB(session *httpservice.HttpSession, loginInfo 
 				return
 			}
 		}
-		//向centerService登陆
-		login.choseServer(session, &user, loginInfo)
 
 	})
 	if err != nil {

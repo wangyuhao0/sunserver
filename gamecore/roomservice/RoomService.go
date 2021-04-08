@@ -442,7 +442,7 @@ func (rs *RoomService) RemoveRoom(roomUuid string, roomType int32) {
 	delete(roomMap, roomUuid)
 }
 
-func (rs *RoomService) RadioPlayerInfo(room *room.Room) {
+func (rs *RoomService) RadioPlayerInfo(clientId uint64, room *room.Room) {
 	playerInfos := make([]*entity.PlayerInfo, 0)
 	resPlayers := make([]*msg.PlayerInfo, 0)
 	playerInfos = append(playerInfos, room.GetOwner())
@@ -451,8 +451,12 @@ func (rs *RoomService) RadioPlayerInfo(room *room.Room) {
 		resPlayers = append(resPlayers, rs.PackPlayerInfo(user))
 	}
 	//向房间里面的所有人广播
+	packRoom := rs.PackRoom(room)
 	for _, user := range playerInfos {
-		room.SendToClient(user.GetClientId(), msg.MsgType_RadioOtherAddRoomRes, &msg.MsgClientOnRoomRes{RoomPlayer: resPlayers})
+		if clientId == 0 || user.GetClientId() == clientId {
+			continue
+		}
+		room.SendToClient(user.GetClientId(), msg.MsgType_RadioOtherAddRoomRes, &msg.MsgClientOnRoomRes{Room: packRoom})
 	}
 }
 

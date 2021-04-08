@@ -7,7 +7,6 @@ import (
 	"sunserver/common/util"
 )
 
-
 func (botModule *BotModule) HandlerLoginRes(clientid uint64, msgPb proto.Message) {
 	tcpStruct := msgPb.(*msg.MsgLoginRes)
 	log.Release("botName[%s] clientID[%d], recive login msg[%+v]", botModule.data.BotName, clientid, tcpStruct)
@@ -23,7 +22,7 @@ func (botModule *BotModule) HandlerLoginFinish(clientid uint64, msg proto.Messag
 func (botModule *BotModule) HandlerCreateRoomRes(clientid uint64, msgPb proto.Message) {
 	//发送创建房间请求
 	msgRes := msgPb.(*msg.MsgCreateRoomRes)
-	log.Release("创建房间回包数据---%s---错误码:%d", msgRes.RoomUuid, msgRes.Ret)
+	log.Release("创建房间回包数据---%s---错误码:%d", msgRes.Room.GetUuid(), msgRes.Ret)
 
 	//偷懒 直接加入队列 后续删除
 	//botModule.AddQueue(clientid,msgRes.RoomUuid)

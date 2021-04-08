@@ -11,7 +11,7 @@ message MsgCreateRoomReq{
 
 message MsgCreateRoomRes{
   ErrCode Ret = 1; //0 成功
-  string  RoomUuid = 2;
+  Room room = 2;
 }
 
 
@@ -33,12 +33,13 @@ message MsgAddRoomReq{
 message MsgAddRoomRes{
   ErrCode Ret = 1;
   //uint64 ClientId = 2;
-  //Room Room = 3;
+  Room Room = 2;
 }
 
 //同步房间已有用户
 message MsgClientOnRoomRes{
-  repeated PlayerInfo RoomPlayer = 1;
+  //repeated PlayerInfo RoomPlayer = 1;
+  Room room = 1;
 }
 
 message MsgQuitRoomReq{
@@ -49,8 +50,22 @@ message MsgQuitRoomReq{
 message MsgQuitRoomRes{
   ErrCode Ret = 1;
 }
+//移除用户
+message MsgRemoveUserReq{
+  string RoomUuid = 1;
+  int32  RoomType = 2;
+  uint64 RemoveUserId = 3; //被移除的用户id
+}
 
-
+message MsgRemoveUserRes{
+  ErrCode Ret = 1;
+  Room room = 2;
+}
+//用户被移除房间回包
+message MsgUserRemovedRes{
+  string RoomUuid = 1;
+  int32 RoomType = 2;
+}
    /* uuid string //房间uuid
     roomName string //房间名字
     ownerCid uint64

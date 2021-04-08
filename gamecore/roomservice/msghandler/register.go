@@ -13,4 +13,5 @@ func OnRegisterMessage(register func(msgType msg.MsgType, message proto.Message,
 	register(msg.MsgType_AddRoomReq, &msg.MsgAddRoomReq{}, handlerClientAddRoom)
 	register(msg.MsgType_QuitRoomReq, &msg.MsgQuitRoomReq{}, handlerClientQuitRoom)
 	register(msg.MsgType_RoomListReq, &msg.MsgRoomListReq{}, handlerClientListRoom)
+	register(msg.MsgType_RemoveUserReq, &msg.MsgRemoveUserReq{}, handlerClientRemoveUserRoom)
 }

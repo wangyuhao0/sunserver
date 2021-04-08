@@ -37,6 +37,9 @@ enum MsgType
   RadioOtherAddRoomRes = 10007;
   RoomListReq = 10008;
   RoomListRes = 10009;
+  RemoveUserReq =  10010;
+  RemoveUserRes = 10011;
+  UserRemovedRes = 10012;
 
   //TableService 30001 - 40000
   AddTableReq = 30001;

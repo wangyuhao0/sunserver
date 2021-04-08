@@ -20,7 +20,7 @@ func handlerClientCreateRoom(ri *cycledo.RoomInterface, clientId uint64, message
 
 	ok := ri.CheckCreateRoom(userId)
 
-	if !ok {
+	if ok {
 		//创不了
 		log.Release("创建过房间%d", userId)
 		ri.SendMsgRi(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_AlreadyCreateRoom})
@@ -42,6 +42,7 @@ func handlerClientCreateRoom(ri *cycledo.RoomInterface, clientId uint64, message
 	//增加房间
 	ri.AddRoomStatus(userId, uuid)
 	//通知客户端
-	newRoom.SendToClient(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_OK, RoomUuid: uuid})
+	packRoom := ri.PackRoomRi(newRoom)
+	newRoom.SendToClient(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_OK, Room: packRoom})
 
 }

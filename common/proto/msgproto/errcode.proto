@@ -22,5 +22,6 @@ enum ErrCode
     AlreadyCreateRoom = 14; //已经创建房间了
 
 
+
 }
 

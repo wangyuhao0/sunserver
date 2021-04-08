@@ -22,7 +22,7 @@ func (p *Player) OnInit(rpcHandler rpc.IRpcHandler, timer ITimer, sender ISender
 	p.ISender = sender
 	p.ITimer = timer
 	p.IPlayer = iPlayer
-	p.pintTicker = p.TimerTicker(p.GetUserId(), time.Second*5, p.CheckTimeout)
+	p.pintTicker = p.TimerTicker(p.GetUserId(), time.Second*10, p.CheckTimeout)
 
 	p.OnInitEnd()
 }
@@ -62,6 +62,7 @@ func (p *Player) StartLogin(cliId uint64, userId uint64, fromGateId int) {
 	p.fromGateId = fromGateId
 	p.clientId = cliId
 	p.Id = userId
+	p.Ping()
 	p.Load()
 }
 
@@ -140,7 +141,7 @@ func (p *Player) CheckTimeout(ticker *timer.Ticker) {
 	timeOut := now.Sub(p.pingTime)
 
 	//ping/pong超过x秒，断开连接
-	if p.GetClientId() > 0 && timeOut > time.Second*5 {
+	if p.GetClientId() > 0 && timeOut > time.Second*10 {
 		p.Close()
 	} else if timeOut > time.Minute*30 {
 		//离线超过x分钟，释放玩家

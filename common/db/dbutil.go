@@ -67,13 +67,13 @@ func MakeInsertId(collName string, data interface{}, key uint64, req *DBControll
 //	mysqlData.Args = []string{account, passWord}
 //	mysqlData.Type = db.OptType_Find
 
-func MakeMysql(tableName string, key uint64, sql string, args []string, optType OptType, req *MysqlControllerReq) {
+func MakeMysql(tableName string, key uint64, sql string, args []string, optType OptType, callBack bool, req *MysqlControllerReq) {
 	req.TableName = tableName
 	req.Key = key
 	req.Sql = sql
 	req.Args = args
 	req.Type = optType
-	req.CallBack = false
+	req.CallBack = callBack
 }
 
 //var req db.RedisControllerReq

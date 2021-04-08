@@ -23,7 +23,6 @@ func handlerClientQuitRoom(ri *cycledo.RoomInterface, clientId uint64, message p
 			room.SendToClient(clientId, msg.MsgType_QuitRoomRes, &msg.MsgQuitRoomRes{Ret: msg.ErrCode_OK})
 			return
 		}
-		room.SetRoomClientNum(room.GetRoomClientNum() - 1)
 		//比对分配是否为房主 如果是房主 需要重置房主
 		ownerId := room.GetOwner().GetClientId()
 		room.SendToClient(clientId, msg.MsgType_QuitRoomRes, &msg.MsgQuitRoomRes{Ret: msg.ErrCode_OK})
@@ -39,10 +38,12 @@ func handlerClientQuitRoom(ri *cycledo.RoomInterface, clientId uint64, message p
 			//otherClients 重新赋值
 			room.SetOtherClients(otherClients[1:])
 			//刷新平均分
-			room.SetAvgRank(room.GetAvgRank()*(uint64(room.GetRoomClientNum())) - rank/uint64(room.GetRoomClientNum()+1))
+			room.SetAvgRank((room.GetAvgRank()*(uint64(room.GetRoomClientNum())) - rank) / uint64(room.GetRoomClientNum()-1))
+			room.SetRoomClientNum(room.GetRoomClientNum() - 1)
+
 			ri.RemoveRoomStatus(userId)
 			//通知
-			ri.RadioPlayerInfoRi(room)
+			ri.RadioPlayerInfoRi(clientId, room)
 			return
 		}
 		//不是房主
@@ -67,11 +68,13 @@ func handlerClientQuitRoom(ri *cycledo.RoomInterface, clientId uint64, message p
 		//重新赋值
 		room.SetOtherClients(append(otherClients[:i], otherClients[i+1:]...))
 		//平均分
-		room.SetAvgRank(room.GetAvgRank()*(uint64(room.GetRoomClientNum())) - rank/uint64(room.GetRoomClientNum()+1))
+		room.SetAvgRank((room.GetAvgRank()*(uint64(room.GetRoomClientNum())) - rank) / uint64(room.GetRoomClientNum()-1))
+		room.SetRoomClientNum(room.GetRoomClientNum() - 1)
+
 		//广播
+		//重置他的房间权限
 		ri.RemoveRoomStatus(userId)
-		ri.RadioPlayerInfoRi(room)
-		//充值他的创房间权限
+		ri.RadioPlayerInfoRi(clientId, room)
 	}
 
 }

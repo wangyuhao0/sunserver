@@ -286,7 +286,7 @@ func (ps *PlayerService) RPCOnClose(byteBuffer []byte) {
 
 	sql := "update `user` set last_login_time = ?,is_login=? where id = ?"
 	args := []string{strconv.FormatInt(timer.Now().Unix(), 10), "0", strconv.FormatUint(v.Id, 10)}
-	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(v.PlatId)), sql, args, db.OptType_Update, &mysqlData)
+	db.MakeMysql(constpackage.UserTableName, uint64(util.HashString2Number(v.PlatId)), sql, args, db.OptType_Update, false, &mysqlData)
 	ps.SendMsgToMysql(&mysqlData)
 
 	//往队列服发送通知下线
@@ -428,6 +428,7 @@ func (ps *PlayerService) RPC_Login(req *rpc.LoginToPlayerServiceReq, res *rpc.Lo
 
 	//3.创建或初始化玩家
 	if ok == false {
+		log.Release("client login %d", req.ClientId)
 		p = ps.NewPlayer(req.UserId)
 		ps.ResetConn(req.ClientId, req.UserId, int(req.NodeId), p)
 		p.OnInit(ps.GetRpcHandler(), ps, ps.gateProxy, ps)
@@ -442,12 +443,11 @@ func (ps *PlayerService) RPC_Login(req *rpc.LoginToPlayerServiceReq, res *rpc.Lo
 		p.ReLogin(req.ClientId, req.UserId, int(req.NodeId))
 
 	}
-	log.Release("出来了++++++++++")
 	return nil
 }
 
 func (ps *PlayerService) ResetConn(cliId uint64, userId uint64, fromGateId int, p *player.Player) {
-	log.Release("ResetConn %d", cliId)
+	//log.Release("ResetConn %d", cliId)
 	p.SetOnline(true)
 	ps.mapPlayer[userId] = p
 	ps.mapClientPlayer[cliId] = p

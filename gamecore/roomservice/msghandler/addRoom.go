@@ -8,7 +8,7 @@ import (
 )
 
 func handlerClientAddRoom(ri *cycledo.RoomInterface, clientId uint64, message proto.Message) {
-	log.Release("roomService-createRoom")
+	log.Release("roomService-addRoom")
 
 	msgReq := message.(*msg.MsgAddRoomReq)
 	roomUuid := msgReq.GetRoomUuid()
@@ -17,10 +17,10 @@ func handlerClientAddRoom(ri *cycledo.RoomInterface, clientId uint64, message pr
 	//登录平台了 然后创建房间放入
 	userId := info.GetUserId()
 	ok := ri.CheckCreateRoom(userId)
-	if !ok {
+	if ok {
 		//创不了
-		log.Release("创建过房间,无法加入 userId-%d", userId)
-		ri.SendMsgRi(clientId, msg.MsgType_CreateRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_AlreadyCreateRoom})
+		log.Release("已在房间了,无法加入 userId-%d", userId)
+		ri.SendMsgRi(clientId, msg.MsgType_AddRoomRes, &msg.MsgCreateRoomRes{Ret: msg.ErrCode_AlreadyCreateRoom})
 		return
 	}
 
@@ -39,7 +39,7 @@ func handlerClientAddRoom(ri *cycledo.RoomInterface, clientId uint64, message pr
 		}
 	}
 	//平衡一下房间的平均分
-	room.SetAvgRank(room.GetAvgRank() * (uint64(room.GetRoomClientNum()) + info.GetRank()) / uint64(room.GetRoomClientNum()+1))
+	room.SetAvgRank(((room.GetAvgRank() * (uint64(room.GetRoomClientNum()))) + info.GetRank()) / uint64(room.GetRoomClientNum()+1))
 	//放入道理吗
 	playerInfo := ri.NewPlayerInfoRi(info)
 	//查看房间有几个人 以及其他人的座位号
@@ -54,12 +54,14 @@ func handlerClientAddRoom(ri *cycledo.RoomInterface, clientId uint64, message pr
 	// 增加用户
 	otherClients = append(otherClients, playerInfo)
 	room.SetOtherClients(otherClients)
-	log.Release("向房间广播---roomID:%d,%s-%d加入房间", roomUuid, info.GetNickName(), info.GetClientId())
 	//发送加入成功
-	//packRoomRi := ri.PackRoomRi(room)
-	ri.SendMsgRi(clientId, msg.MsgType_AddRoomRes, &msg.MsgAddRoomRes{Ret: msg.ErrCode_OK})
+	packRoomRi := ri.PackRoomRi(room)
+	ri.SendMsgRi(clientId, msg.MsgType_AddRoomRes, &msg.MsgAddRoomRes{Ret: msg.ErrCode_OK, Room: packRoomRi})
 	//设置已经加入
 	ri.AddRoomStatus(userId, roomUuid)
-	ri.RadioPlayerInfoRi(room)
+
+	//广播数据
+	log.Release("向房间广播---roomID:%d,%s-%d加入房间", roomUuid, info.GetNickName(), info.GetClientId())
+	ri.RadioPlayerInfoRi(clientId, room)
 
 }
